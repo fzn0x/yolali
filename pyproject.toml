@@ -99,6 +99,8 @@ explicit = true
 target-version = "py311"
 line-length = 100
 src = ["src", "tests", "scripts"]
+# Markdown code blocks keep hand-aligned shape comments; do not reflow them.
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = [
