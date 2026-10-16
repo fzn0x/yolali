@@ -458,19 +458,27 @@ class TrainConfig:
     out_dir: Path = Path("runs/exp")
 ```
 
-`Trainer(model, loss, train_loader, val_loader, cfg, loggers=(), evaluator=None)`
-has `fit()` and `resume(path)`. Each feature is an `if cfg.flag:` at one
-place in the loop, not a strategy hierarchy. DDP is detected from
-`torchrun` environment variables; the user never passes a rank.
+`Trainer(model, criterion, train_loader, cfg, evaluator=, val_loader=,
+loggers=, close_mosaic_transform=, device=)` has `fit()` and `resume(path)`.
+`criterion(model_output, targets)` returns anything with `.total` and
+`.as_dict()`, so `DetectionLoss` and `DualLoss` plug in unchanged. Each
+feature is an `if cfg.flag:` at one place in the loop, not a strategy
+hierarchy. DDP is detected from `torchrun` environment variables; the user
+never passes a rank, but does build the loader with a `DistributedSampler`
+(`scripts/train.py` shows how). Optimiser parameter groups follow the YOLO
+lineage: conv weights decay, BN weights and biases do not, biases warm up
+from a higher learning rate.
 
 `Logger` is a `Protocol` with `log_scalars(step, values)`, `log_config(cfg)`,
 `close()`. `CsvLogger` is always available; TensorBoard and W&B are optional
 extras that raise a clear `ImportError` message.
 
-Checkpoint = `{model, ema, optimizer, scaler, rng (torch, cuda, numpy,
-python), epoch, cfg, version}`. `resume` restores all of it so a resumed run
-is bitwise identical to an uninterrupted one on the same hardware (tested
-for two short epochs).
+Checkpoint = `{model, ema, optimizer, scaler, rng (torch, cuda, python),
+epoch, best_fitness, cfg, model_cfg, version}`. NumPy's global generator is
+deliberately absent: the library only draws from explicit `Generator`s
+seeded by `(seed, epoch, index)`. `resume` restores everything so a resumed
+run is bitwise identical to an uninterrupted one (tested: 2 + 2 epochs
+equals 4 epochs, model and EMA weights `torch.equal`).
 
 ### 4.11 `eval` *(phase 4)*
 
@@ -482,10 +490,22 @@ Our own COCO-protocol mAP, not a pycocotools wrapper:
 - `map.py`: accumulate per class, compute precision/recall, 101-point
   interpolated AP, area ranges (`all/small/medium/large`), `maxDets=100`.
 
-Tested against hand-computed cases (one class, three predictions, two GTs)
-and, under the `coco` extra, against `pycocotools` on a random synthetic
-set to `1e-6`. **Why both:** the hand cases make the algorithm legible; the
-pycocotools cross-check is what gate 3 depends on.
+The matching rules reproduced from the protocol: predictions in
+descending score; a prediction first tries the free *regular* ground truth
+of its class with the highest IoU at or above the threshold, then an
+*ignored* one (crowd, or outside the current area range) which makes it
+neither TP nor FP; crowd regions use intersection-over-prediction-area and
+may absorb any number of predictions; at most 100 detections per image
+**and class** are scored; size buckets use the annotation's own area
+(segmentation area for COCO). Tested against hand-computed cases and,
+under the `coco` extra, against `pycocotools` on random synthetic sets to
+`1e-6` on all six summary numbers. **Why both:** the hand cases make the
+algorithm legible; the pycocotools cross-check is what gate 3 depends on.
+
+`Evaluator(model, nc, EvalConfig(conf=0.001, iou=0.7, max_det=300, nms=True))`
+runs `postprocess` (multi-label: every `(anchor, class)` pair above `conf`
+is a candidate, then class-aware NMS or a plain top-k for the NMS-free
+head), undoes the letterbox, and feeds `MetricAccumulator`.
 
 ### 4.12 `infer` *(phase 7)*
 
