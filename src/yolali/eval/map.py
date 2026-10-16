@@ -93,13 +93,22 @@ class _ClassStore:
 
 def _top_per_class(scores: Tensor, classes: Tensor, max_det: int) -> Tensor:
     """Bool mask keeping the ``max_det`` highest-scoring predictions of each class."""
-    keep = torch.ones(scores.shape[0], dtype=torch.bool)
-    present: Tensor = torch.unique(classes)
-    for k in range(int(present.shape[0])):
-        idx: Tensor = (classes == present[k]).nonzero(as_tuple=True)[0]
-        if idx.shape[0] > max_det:
-            drop: Tensor = idx[torch.argsort(-scores[idx], stable=True)[max_det:]]
-            keep[drop] = False
+    n = int(scores.shape[0])
+    keep = torch.ones(n, dtype=torch.bool)
+    if n == 0:
+        return keep
+    # Sort by (class, -score); the rank of each prediction inside its class is
+    # its position minus the position where that class starts.
+    order = torch.argsort(classes.double() * 2.0 - scores.double().clamp(0, 1), stable=True)
+    sorted_classes = classes[order]
+    starts = torch.zeros(n, dtype=torch.int64)
+    starts[1:] = (sorted_classes[1:] != sorted_classes[:-1]).cumsum(0)
+    first_index = torch.zeros(int(starts[-1]) + 1, dtype=torch.int64)
+    change = torch.ones(n, dtype=torch.bool)
+    change[1:] = sorted_classes[1:] != sorted_classes[:-1]
+    first_index[starts[change]] = change.nonzero(as_tuple=True)[0]
+    rank = torch.arange(n) - first_index[starts]
+    keep[order[rank >= max_det]] = False
     return keep
 
 
