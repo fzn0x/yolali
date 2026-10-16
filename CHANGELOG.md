@@ -16,7 +16,6 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `yolali.loss`: `LossConfig`, BCE / varifocal, IoU and DFL terms,
   `DetectionLoss` and `DualLoss` with closed-form single-anchor tests.
 - `yolali.types.Targets`: padded ground-truth container.
-
 - Repository scaffolding: Apache-2.0 license, `NOTICE`, `pyproject.toml`
   with uv / ruff / pyright configuration, CI skeleton.
 - `docs/design.md`: component boundaries and the rationale for every
