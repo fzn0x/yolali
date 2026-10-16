@@ -8,13 +8,13 @@ phase is not done until its gate passes.
 Hardware available for gates: one NVIDIA RTX 3060 12 GB (Windows 11),
 Python 3.12, CUDA 12.8 wheels via uv.
 
-## Phase 0: scaffolding (this commit series)
+## Phase 0: scaffolding — done
 
 - Repo, license, NOTICE, `pyproject.toml`, CI skeleton, docs.
 - **Gate:** `uv run pytest`, `ruff check`, `pyright` pass on the empty
   package. Awaiting approval before phase 1.
 
-## Phase 1: box ops, assigners, losses
+## Phase 1: box ops, assigners, losses — done
 
 Files: `ops/boxes.py`, `ops/anchors.py`, `ops/nms.py`, `assign/tal.py`,
 `assign/o2o.py`, `loss/*.py`, `types.py`.
@@ -33,7 +33,7 @@ Tests with hand-computed values:
 
 **Gate 1:** suite green, ruff + pyright clean.
 
-## Phase 2: GELAN backbone, DFL head, converter, equivalence
+## Phase 2: GELAN backbone, DFL head, converter, equivalence — done (gate 2 passed)
 
 Files: `nn/blocks.py`, `nn/backbone/gelan.py`, `nn/neck/gelan_pan.py`,
 `nn/head/decode.py`, `nn/head/detect.py`, `nn/config.py`, `nn/model.py`,

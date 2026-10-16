@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `yolali.nn`: GELAN blocks (`Conv`, `RepConv`, `RepCSP`, `RepCSPELAN`,
+  `ADown`, `SPPELAN`) with BN/RepConv fusion, `GELANBackbone`, `GELANPAN`
+  neck, `DetectHead` (DFL or direct regression), YAML `ModelConfig` and
+  `YolaliModel`; N/S/M/C configs under `configs/models/`.
+- `yolali.zoo`: stub-class unpickler and GELAN-C converter for official
+  YOLOv9 checkpoints; forward-pass equivalence verified to < 1e-4
+  (`BENCHMARKS.md`, gate 2).
 - `yolali.ops`: box conversions, IoU/GIoU/CIoU, anchor points, DFL and
   direct-regression decoding, batched NMS; all tested against hand-computed
   values.

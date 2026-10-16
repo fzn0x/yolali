@@ -6,7 +6,7 @@ This document is the contract between the code and its readers. Every
 component boundary below has a "why". When the implementation and this file
 disagree, one of them is wrong and the fix is a commit that changes both.
 
-Status: **v0, phase 1 complete** (ops, assign, loss). Sections marked *(phase N)* describe what
+Status: **v0, phase 2 complete** (ops, assign, loss, GELAN model, converter; gate 2 passed, see `BENCHMARKS.md`). Sections marked *(phase N)* describe what
 will exist after that phase of [`plan.md`](plan.md). Nothing here claims a
 measured number; those live only in `BENCHMARKS.md`.
 
@@ -248,7 +248,7 @@ corresponding name in the reference repo so a reader can cross-check.
 
 | Block | What it is |
 |---|---|
-| `Conv` | Conv2d → BatchNorm2d → SiLU. `fuse()` folds BN for inference. |
+| `Conv` | Conv2d → BatchNorm2d(eps 1e-3, momentum 0.03, as in the reference) → SiLU. `fuse()` folds BN for inference. |
 | `RepConv` | 3×3 and 1×1 parallel conv-BN branches summed, SiLU; `fuse()` collapses to one 3×3. Training-time form only, no identity branch (as in the reference). |
 | `RepBottleneck` | `RepConv(3×3)` → `Conv(3×3)` with optional residual. |
 | `RepCSP` | CSP split: `n` bottlenecks on one branch, 1×1 on the other, concat, 1×1. |
@@ -300,13 +300,15 @@ on where it would plug in (a second head consuming backbone features via
 `DetectHead(ch: tuple[int,...], nc, reg_max)` per level `i`:
 
 ```
-box branch: Conv(ch_i, c2, 3) → Conv(c2, c2, 3, groups=4) → Conv2d(c2, 4*reg_max or 4, 1)
-cls branch: Conv(ch_i, c3, 3) → Conv(c3, c3, 3, groups=4) → Conv2d(c3, nc, 1)
+box branch: Conv(ch_i, c2, 3) → Conv(c2, c2, 3, groups=g) → Conv2d(c2, 4*reg_max or 4, 1, groups=g)
+cls branch: Conv(ch_i, c3, 3) → Conv(c3, c3, 3)           → Conv2d(c3, nc, 1)
 ```
 
-with `c2 = max(16, ch[0] // 4, 4 * reg_max)` and `c3 = max(ch[0], min(nc, 100))`.
-The `groups=4` second conv matches the reference `DDetect` weight shapes;
-it is what the equivalence test must reproduce. The head returns
+with `c2 = make_divisible(max(ch[0] // 4, 4 * reg_max, 16), 4)`,
+`c3 = max(ch[0], min(2 * nc, 128))`, and `g = 4` for DFL heads (matching the
+reference `DDetect` weight shapes, which the equivalence test reproduces) or
+`g = 1` for the direct-regression head, whose four output channels would
+otherwise each see a quarter of the features. The head returns
 `(box_raw (B, A, 4*reg_max | 4), cls_logits (B, A, nc))` with levels
 flattened and concatenated in stride order. Decoding is *not* done here.
 
@@ -357,9 +359,12 @@ head:     { type: dual, reg_max: 0 }
 (`dict[str, type[Backbone]]`) that users can extend by passing their own
 mapping. No import-time side effects, no decorators that register globally.
 
-`YolaliModel(backbone, neck, head)` is three attributes and a `forward`. It
-also has `fuse()` (BN folding) and `export(format, path, **kw)`, which
-delegates to `yolali.export`.
+`YolaliModel(backbone, neck, head, cfg)` is three attributes and a `forward`
+returning a `RawPrediction(box_raw, cls_logits, anchors, strides)`;
+`decode()` turns that into pixel boxes and probabilities. It also has
+`fuse()` (BN folding) and, from phase 7, `export(format, path, **kw)`.
+`Backbone` and `Neck` in `nn/interfaces.py` are thin `nn.Module` base
+classes that spell out the contract (`out_channels`, `strides`, `forward`).
 
 ### 4.8 `zoo` *(phase 2)*
 
@@ -373,14 +378,22 @@ reference's key names (`model.0.conv.weight`, ...).
 `yolov9.py` holds one explicit table `REFERENCE_INDEX -> yolali attribute`
 for the GELAN-C graph (e.g. `model.3` → `backbone.stage3.elan`) and remaps
 parameter names mechanically. The table is data, so a reader can audit it
-line by line. It raises on any unmatched key in either direction.
+line by line. It raises on any unmatched reference key; `load_state_dict(strict=True)`
+catches the other direction. `tests/fixtures/gelan_c_reference_shapes.json`
+(the reference `state_dict` key → shape table) lets CI verify the mapping
+without the 51 MB checkpoints.
 
 Equivalence test (gate 2): load `gelan-c.pt`, convert, run both on a fixed
 `(1, 3, 640, 640)` input, compare the three raw head outputs. The reference
 forward is obtained by running the reference repo in a subprocess from a
-*separate* checkout, saving outputs to `.npz`. Those `.npz` files are
-committed as test fixtures (a few MB) so CI never needs the GPL code. The
-threshold is `max |a - b| < 1e-4` in float32 with `fuse()` disabled.
+*separate* checkout, saving outputs to `.npz`. The 320 px `.npz` dumps
+(~2 MB each) are committed as test fixtures so CI never needs the GPL code;
+640 px dumps are kept locally. The threshold is `max |a - b| < 1e-4` in
+float32 with `fuse()` disabled. Measured results are in `BENCHMARKS.md`.
+
+A detail worth recording: the reference sets `BatchNorm2d(eps=1e-3,
+momentum=0.03)` on every layer at build time. With PyTorch's default `eps`
+the max abs diff was ~10; with the reference values it is < 1e-4.
 
 ### 4.9 `data` *(phase 3)*
 
