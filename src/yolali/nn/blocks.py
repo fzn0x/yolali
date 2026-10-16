@@ -51,6 +51,10 @@ def fuse_conv_bn(conv: nn.Conv2d, bn: nn.BatchNorm2d) -> nn.Conv2d:
 class Conv(nn.Module):
     """``Conv2d -> BatchNorm2d -> SiLU`` (reference: ``Conv``).
 
+    BatchNorm uses ``eps=1e-3, momentum=0.03`` like the reference implementation;
+    the official checkpoints were trained with those values and the
+    equivalence gate fails with PyTorch defaults.
+
     Args:
         c_in: input channels.
         c_out: output channels.
@@ -74,7 +78,8 @@ class Conv(nn.Module):
     ) -> None:
         super().__init__()
         self.conv = nn.Conv2d(c_in, c_out, k, s, k // 2 if p is None else p, groups=g, bias=False)
-        self.bn: nn.Module = nn.BatchNorm2d(c_out)
+        # eps/momentum follow the YOLO lineage (and the official checkpoints).
+        self.bn: nn.Module = nn.BatchNorm2d(c_out, eps=1e-3, momentum=0.03)
         self.act: nn.Module = nn.SiLU() if act else nn.Identity()
 
     def forward(self, x: Tensor) -> Tensor:
