@@ -22,7 +22,7 @@ jobs:
           enable-cache: true
 
       - name: Sync environment (CPU torch)
-        run: uv sync --extra export --extra coco
+        run: uv sync --extra export --extra coco --extra vit
 
       - name: Ruff lint
         run: uv run ruff check .
