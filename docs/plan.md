@@ -68,7 +68,7 @@ agree on COCO128 (converted both ways).
 **Gate:** suite green; COCO128 loads and a 16-image mosaic batch renders
 to `runs/debug/` for eyeballing (image committed to docs, not to tests).
 
-## Phase 4: Trainer and evaluator; gate 3 — gate 3 passed (52.5 vs 52.3), COCO128 run pending
+## Phase 4: Trainer and evaluator; gate 3 — done (gate 3 passed 52.5 vs 52.3; gate 4 part 1: loss monotone, mAP50 0.069 from scratch, see BENCHMARKS.md)
 
 Files: `train/*.py`, `eval/*.py`, `scripts/train.py`, `scripts/val.py`.
 
@@ -126,7 +126,7 @@ batched call returns one `Detections` per input; ONNX Runtime parity
 
 **Gate 5:** ONNX parity test passes.
 
-## Phase 8: CI, docs site, branding, benchmarks
+## Phase 8: CI, docs site, branding, benchmarks — in progress (site, branding, workflows done; VOC and ViT runs in flight)
 
 - CI already runs lint + types + tests on push; nightly COCO128 smoke gets
   wired to `scripts/train.py`.

@@ -8,6 +8,27 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `yolali.train`: `TrainConfig` (one switch per feature), `Trainer` with AMP,
+  EMA, warmup + cosine schedule, close-mosaic, gradient accumulation,
+  multi-scale, `torch.compile`, DDP and bitwise resume; CSV, TensorBoard and
+  W&B loggers; `scripts/train.py`.
+- `yolali.eval`: COCO-protocol greedy matching with crowd and ignore
+  handling, 101-point AP, area buckets, `MetricAccumulator`, `Evaluator`
+  with letterbox undo; agrees with pycocotools to 1e-6; `scripts/val.py`.
+- `yolali.nn.head.dual`: one-to-many / one-to-one dual head and `DualLoss`
+  for NMS-free inference; N/S/M configs default to it with direct regression.
+- `yolali.nn.backbone.vit`: DINOv2/DINOv3 ViT backbone through `timm` with
+  patch-16 resampling and a Spatial Tuning Adapter (`sta.py`); `vit-s` and
+  `vit-m` configs.
+- `yolali.infer`: `Detector.predict` for tensors, arrays and paths, typed
+  `Detections`, drawing helper; `scripts/detect.py`.
+- `yolali.export`: ONNX (standard ops, dynamic shapes) and TorchScript with
+  parity tests; `YolaliModel.export`; `scripts/export.py`.
+- Public API re-exports at the package top level.
+- MkDocs Material documentation site (datasheet, quickstart, one page per
+  component, mkdocstrings API reference) deployed to GitHub Pages; logo,
+  banner and block-diagram assets; nightly COCO128 smoke-train workflow;
+  PyPI trusted-publishing workflow on tags.
 - `yolali.data`: YOLO txt and COCO json readers, fingerprinted label cache,
   composable transforms (letterbox, mosaic, mixup, HSV, perspective, flips),
   `DetectionDataset`, `collate_samples`, `RectBatchSampler`;
