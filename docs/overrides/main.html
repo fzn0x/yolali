@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{#- A revision band above the masthead, in the datasheet idiom. The values come
+    from `extra` in mkdocs.yml so the stamp is one edit away from pyproject. -#}
+{% block announce %}
+  rev {{ config.extra.version }} &middot; {{ config.extra.status }} &middot; code Apache-2.0 &middot; GPL weights never bundled &middot;
+  <a href="{{ 'benchmarks/' | url }}">every number here was measured</a>
+{% endblock %}

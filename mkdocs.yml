@@ -1,0 +1,110 @@
+site_name: yolali
+site_description: A YOLO you can actually read. Clean-room, NMS-free, fully typed PyTorch object detection.
+site_url: https://fzn0x.github.io/yolali/
+repo_url: https://github.com/fzn0x/yolali
+repo_name: fzn0x/yolali
+edit_uri: edit/main/docs/
+copyright: Apache-2.0. GELAN architecture after WongKinYiu's YOLOv9.
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  logo: assets/logo-mark.svg
+  favicon: assets/favicon.svg
+  font: false
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+  palette:
+    scheme: yolali
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/yolali.css
+
+extra:
+  version: 0.0.1
+  status: pre-alpha
+
+nav:
+  - Datasheet: index.md
+  - Quickstart: quickstart.md
+  - Components:
+      - components/index.md
+      - Box ops and anchors: components/ops.md
+      - Assigners: components/assign.md
+      - Losses: components/loss.md
+      - Model, backbones, heads: components/model.md
+      - Data pipeline: components/data.md
+      - Trainer: components/train.md
+      - Evaluator: components/eval.md
+      - Inference and export: components/infer-export.md
+  - Weights and licenses: weights.md
+  - Design: design.md
+  - Plan and gates: plan.md
+  - Benchmarks: benchmarks.md
+  - API reference:
+      - api/index.md
+      - yolali.ops: api/ops.md
+      - yolali.assign: api/assign.md
+      - yolali.loss: api/loss.md
+      - yolali.nn: api/nn.md
+      - yolali.data: api/data.md
+      - yolali.train: api/train.md
+      - yolali.eval: api/eval.md
+      - yolali.infer: api/infer.md
+      - yolali.export: api/export.md
+      - yolali.zoo: api/zoo.md
+  - Changelog: changelog.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: "#"
+      toc_depth: 3
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.snippets:
+      base_path: [".", "docs"]
+      check_paths: true
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            members_order: source
+            merge_init_into_class: true
+            show_if_no_docstring: false
+            filters: ["!^_"]
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn

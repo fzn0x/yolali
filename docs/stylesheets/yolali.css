@@ -1,0 +1,309 @@
+/* yolali documentation theme: "technical blueprint".
+   One accent (cyanotype blue) owns whole regions: the header, the section rail
+   and section openers. The reading column stays plain sans at 16 px on a
+   drafting-film ground; labels, headings, navigation and figures are set in
+   monospace with tabular digits. */
+
+:root {
+  --yl-blue: #1849a9;
+  --yl-blue-deep: #12367f;
+  --yl-ground: #f5f7f9;
+  --yl-ink: #16202a;
+  --yl-grid: #d8e1ec;
+  --yl-mute: #4a5a6a;
+  --yl-mono: "Cascadia Mono", "SF Mono", "JetBrains Mono", Consolas, ui-monospace, Menlo, monospace;
+  --yl-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+[data-md-color-scheme="yolali"] {
+  color-scheme: light;
+  --md-primary-fg-color: var(--yl-blue);
+  --md-primary-fg-color--light: #2d5fc4;
+  --md-primary-fg-color--dark: var(--yl-blue-deep);
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.72);
+  --md-accent-fg-color: var(--yl-blue-deep);
+  --md-accent-fg-color--transparent: rgba(24, 73, 169, 0.08);
+  --md-default-bg-color: var(--yl-ground);
+  --md-default-fg-color: var(--yl-ink);
+  --md-default-fg-color--light: #2b3744;
+  --md-default-fg-color--lighter: var(--yl-mute);
+  --md-default-fg-color--lightest: var(--yl-grid);
+  --md-typeset-color: var(--yl-ink);
+  --md-typeset-a-color: var(--yl-blue);
+  --md-code-bg-color: #e9eef5;
+  --md-code-fg-color: var(--yl-ink);
+  --md-code-hl-color: rgba(24, 73, 169, 0.14);
+  --md-typeset-table-color: var(--yl-grid);
+  --md-typeset-table-color--light: rgba(24, 73, 169, 0.04);
+  --md-admonition-fg-color: var(--yl-ink);
+  --md-footer-bg-color: var(--yl-blue-deep);
+  --md-footer-bg-color--dark: var(--yl-blue-deep);
+  --md-footer-fg-color: #ffffff;
+  --md-footer-fg-color--light: rgba(255, 255, 255, 0.8);
+  --md-footer-fg-color--lighter: rgba(255, 255, 255, 0.6);
+  --md-text-font-family: var(--yl-sans);
+  --md-code-font-family: var(--yl-mono);
+}
+
+/* Drafting-film ground: a faint grid behind the reading column. */
+.md-main {
+  background-color: var(--yl-ground);
+  background-image:
+    linear-gradient(to right, var(--yl-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--yl-grid) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+  background-position: 0 0;
+}
+.md-content {
+  background: rgba(245, 247, 249, 0.92);
+}
+.md-typeset {
+  font-size: 0.8rem; /* 16 px at the theme's 20 px root */
+  line-height: 1.6;
+}
+
+/* Masthead: blue band, mono wordmark, no shadow. */
+.md-header {
+  background: var(--yl-blue);
+  box-shadow: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+}
+.md-header__topic,
+.md-header__title {
+  font-family: var(--yl-mono);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.md-header__button.md-logo svg {
+  height: 1.4rem;
+  width: 1.4rem;
+}
+.md-tabs {
+  background: var(--yl-blue-deep);
+}
+.md-banner {
+  background: var(--yl-blue-deep);
+  color: #fff;
+  font-family: var(--yl-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.md-banner .md-typeset {
+  font-size: inherit;
+  color: inherit;
+}
+.md-banner a {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* Rail: the section tree on a blue field, white type, state as a mark. */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    background: var(--yl-blue);
+    margin: 0;
+    padding: 0.6rem 0;
+    border-right: 0;
+    scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+  }
+  .md-sidebar--primary .md-nav--primary > .md-nav__title {
+    display: none;
+  }
+  .md-sidebar--primary .md-nav__link,
+  .md-sidebar--primary .md-nav__item--section > .md-nav__link,
+  .md-sidebar--primary .md-nav__title {
+    color: #fff;
+    font-family: var(--yl-mono);
+    font-size: 0.62rem;
+    line-height: 1.5;
+  }
+  .md-sidebar--primary .md-nav__item--section > .md-nav__link {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .md-sidebar--primary .md-nav__link:hover,
+  .md-sidebar--primary .md-nav__link:focus {
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  .md-sidebar--primary .md-nav__link--active,
+  .md-sidebar--primary .md-nav__link--active:hover {
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .md-sidebar--primary .md-nav__item .md-nav__link {
+    position: relative;
+  }
+  .md-sidebar--primary .md-nav__link--active::before {
+    content: "\25A0";
+    position: absolute;
+    left: -0.9rem;
+    font-size: 0.5rem;
+  }
+  .md-sidebar--primary .md-nav__item--nested > .md-nav__link {
+    color: #fff;
+  }
+  .md-sidebar--primary .md-nav__icon,
+  .md-sidebar--primary .md-nav__link:hover .md-nav__icon {
+    color: #fff;
+  }
+  .md-sidebar--primary .md-nav__list .md-nav__list {
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+    margin-left: 0.35rem;
+  }
+}
+
+/* Type: mono headings and labels, tabular figures wherever digits line up. */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6,
+.md-nav--secondary .md-nav__link,
+.md-nav--secondary .md-nav__title,
+.md-typeset table:not([class]) th,
+.md-typeset .md-button {
+  font-family: var(--yl-mono);
+  font-variant-numeric: tabular-nums;
+}
+.md-typeset h1 {
+  color: var(--yl-ink);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.6em;
+}
+.md-typeset h2 {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--yl-blue);
+  border-top: 2px solid var(--yl-blue);
+  padding-top: 0.6rem;
+  margin-top: 2.2rem;
+}
+.md-typeset h2 .headerlink,
+.md-typeset h3 .headerlink {
+  color: var(--yl-grid);
+}
+.md-typeset h3 {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--yl-ink);
+}
+.md-typeset table:not([class]) {
+  font-size: 0.7rem;
+  border: 1px solid var(--yl-grid);
+  border-radius: 0;
+  box-shadow: none;
+  font-variant-numeric: tabular-nums;
+}
+.md-typeset table:not([class]) th {
+  background: var(--yl-blue);
+  color: #fff;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 0;
+}
+.md-typeset table:not([class]) td {
+  border-top: 1px solid var(--yl-grid);
+  vertical-align: top;
+}
+.md-typeset table:not([class]) td code,
+.md-typeset table:not([class]) th code {
+  font-size: 0.95em;
+}
+.md-typeset code {
+  border-radius: 0;
+}
+.md-typeset pre > code {
+  border: 1px solid var(--yl-grid);
+  border-radius: 0;
+}
+.md-typeset .highlight span.filename {
+  font-family: var(--yl-mono);
+  border-radius: 0;
+}
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 0;
+  border-width: 0 0 0 0.2rem;
+  box-shadow: none;
+  font-size: 0.72rem;
+}
+.md-typeset .admonition-title,
+.md-typeset summary {
+  font-family: var(--yl-mono);
+}
+.md-typeset img {
+  background: #fff;
+  border: 1px solid var(--yl-grid);
+  padding: 0.5rem;
+}
+.md-typeset img.plain {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* Datasheet furniture. */
+.md-typeset .yl-part-header {
+  font-family: var(--yl-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--yl-mute);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  border-bottom: 1px solid var(--yl-grid);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+.md-typeset .yl-part-header b {
+  color: var(--yl-ink);
+}
+.md-typeset .yl-part-header a {
+  text-transform: none;
+}
+.md-typeset .yl-stamp {
+  display: inline-block;
+  border: 1.5px solid var(--yl-ink);
+  padding: 0 0.35em;
+  font-weight: 700;
+  color: var(--yl-ink);
+  transform: rotate(-2deg);
+}
+.md-typeset .yl-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0 1.6rem;
+}
+.md-typeset .yl-grid-2 ul {
+  margin-top: 0;
+}
+
+/* Footer. */
+.md-footer-meta {
+  font-family: var(--yl-mono);
+  font-size: 0.6rem;
+}
+
+/* Motion: nothing beyond the theme's own; honour the preference regardless. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
