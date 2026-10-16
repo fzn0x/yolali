@@ -6,7 +6,7 @@ This document is the contract between the code and its readers. Every
 component boundary below has a "why". When the implementation and this file
 disagree, one of them is wrong and the fix is a commit that changes both.
 
-Status: **v0, pre-implementation**. Sections marked *(phase N)* describe what
+Status: **v0, phase 1 complete** (ops, assign, loss). Sections marked *(phase N)* describe what
 will exist after that phase of [`plan.md`](plan.md). Nothing here claims a
 measured number; those live only in `BENCHMARKS.md`.
 
@@ -46,6 +46,7 @@ src/yolali/
 ├── ops/                 pure tensor functions, no parameters, no state
 │   ├── boxes.py         format conversions, IoU family, ltrb <-> xyxy
 │   ├── anchors.py       anchor points + stride tensor from feature shapes
+│   ├── decode.py        DFL expectation / direct softplus -> xyxy pixels (shared by loss, infer, export)
 │   └── nms.py           batched class-aware NMS
 ├── assign/              label assignment: predictions -> targets
 │   ├── tal.py           TaskAlignedAssigner (one-to-many)
@@ -65,7 +66,6 @@ src/yolali/
 │   ├── neck/
 │   │   └── gelan_pan.py GELAN PAN-FPN neck
 │   ├── head/
-│   │   ├── decode.py    DFL integral and direct-ltrb decode (shared by train/infer/export)
 │   │   ├── detect.py    DetectHead (one set of branches; DFL or direct)
 │   │   └── dual.py      DualDetectHead (o2m + o2o branches; picks o2o at eval)
 │   ├── config.py        ModelConfig + YAML loader + width/depth scaling rules
@@ -127,7 +127,7 @@ These hold everywhere unless a docstring says otherwise.
 | raw box | `(B, A, 4 * reg_max)` or `(B, A, 4)` | DFL logits or direct `ltrb` in stride units |
 | decoded box | `(B, A, 4)` xyxy **pixels** | after `decode.py` |
 | cls logits | `(B, A, nc)` | pre-sigmoid |
-| targets | `(B, M, 5)` padded `[cls, x1, y1, x2, y2]` pixels, `mask (B, M)` | `M` = max GT per batch |
+| targets | `Targets(boxes (B, M, 4) xyxy px, classes (B, M), mask (B, M))` | frozen dataclass in `types.py`; `M` = max GT per batch |
 
 Boxes are `xyxy` in pixels at every public boundary. `cxcywh` and normalised
 formats exist only inside `data/formats/*` (reading) and `ops/boxes.py`
@@ -144,9 +144,17 @@ pixels make hand-computed tests readable.
 
 - `xyxy_to_cxcywh`, `cxcywh_to_xyxy`, `ltrb_to_xyxy(anchors, ltrb)`,
   `xyxy_to_ltrb(anchors, xyxy)`.
-- `box_iou(a, b) -> (N, M)`, `pairwise_iou(a, b) -> (N,)` with variants
+- `box_iou(a, b) -> (N, M)`, `elementwise_iou(a, b) -> (N,)`, both thin
+  wrappers over one `broadcast_iou` so the formulas exist once. Variants
   `"iou" | "giou" | "ciou"`. CIoU follows Zheng et al. 2020; the aspect term
-  uses `atan` on `w/h` with `eps=1e-7` inside every division.
+  uses `atan` on `w/h` with `eps=1e-7` inside every division and a
+  gradient-free `alpha`.
+
+`decode.py`
+
+- `dfl_expectation(raw, reg_max)`, `direct_distances(raw)` (softplus) and
+  `decode_boxes(raw, anchors, strides, reg_max) -> (B, A, 4)` xyxy pixels.
+  Lives in `ops` rather than the head so `loss` never imports `nn`.
 
 `anchors.py`
 
@@ -194,18 +202,21 @@ class LossConfig:
     box_weight: float = 7.5
     cls_weight: float = 0.5
     dfl_weight: float = 1.5          # ignored when reg_max == 0
-    iou_type: Literal["ciou", "giou"] = "ciou"
+    iou_kind: Literal["ciou", "giou"] = "ciou"
     cls_loss: Literal["bce", "vfl"] = "bce"
     reg_max: int = 16                # 0 => direct ltrb regression
     tal_topk: int = 10
     tal_alpha: float = 0.5
     tal_beta: float = 6.0
     o2o_weight: float = 1.0          # weight of the one-to-one branch in DualLoss
+    vfl_alpha: float = 0.75
+    vfl_gamma: float = 2.0
 ```
 
-`DetectionLoss(cfg, nc, strides)` takes **raw head outputs** and targets and
-returns `(total, dict[str, Tensor])`. It owns one assigner. It never touches
-the model.
+`DetectionLoss(cfg, nc, assigner=None)` takes **raw head outputs**, the
+anchors and strides they were produced on, and `Targets`; it returns a
+`LossOutput(total, box, cls, dfl, num_fg)`. It owns one assigner. It never
+touches the model.
 
 - Classification: BCE on `target_scores` (soft) or varifocal
   (`alpha=0.75, gamma=2.0`).
@@ -213,9 +224,14 @@ the model.
 - DFL (only if `reg_max > 0`): cross-entropy against the two integer bins
   bracketing each `ltrb` target in stride units, clamped to `[0, reg_max-1-0.01]`.
 - Normalisation: all three terms divided by `target_scores.sum()` clamped to
-  `>= 1`.
+  `>= 1`, then the weighted sum is multiplied by the batch size (YOLOv8/v9
+  convention) so the default weights and learning rate transfer across
+  batch sizes. Per-term values reported for logging are *before* that
+  multiplication.
+- When no anchor is positive, box and DFL terms are `raw.sum() * 0` so the
+  graph stays connected and DDP never sees an unused parameter.
 
-`DualLoss(cfg, nc, strides)` holds two `DetectionLoss`es: one with the
+`DualLoss(cfg, nc)` holds two `DetectionLoss`es: one with the
 `TaskAlignedAssigner`, one with the `OneToOneAssigner`. Total is
 `o2m + o2o_weight * o2o`. Per-branch terms are reported separately so a
 training log shows both.
@@ -294,13 +310,7 @@ it is what the equivalence test must reproduce. The head returns
 `(box_raw (B, A, 4*reg_max | 4), cls_logits (B, A, nc))` with levels
 flattened and concatenated in stride order. Decoding is *not* done here.
 
-`decode.py`
-
-- `dfl_decode(box_raw, reg_max) -> ltrb (B, A, 4)` stride units: softmax over
-  bins, expectation with `arange(reg_max)`.
-- `direct_decode(box_raw) -> ltrb (B, A, 4)`: `softplus(box_raw)`. See
-  Deviations D2.
-- `ltrb_to_xyxy(anchors, strides, ltrb)`: `(ax - l*s, ay - t*s, ax + r*s, ay + b*s)`.
+See `ops/decode.py` (4.1): the head calls `decode_boxes` and nothing else.
 
 `DualDetectHead` holds two `DetectHead`s on the same neck features: `o2m`
 and `o2o`. During training it returns both. In `eval()` mode it returns
