@@ -31,3 +31,6 @@ site/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Impeccable design-skill session state
+.impeccable/
