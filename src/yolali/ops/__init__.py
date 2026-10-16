@@ -4,6 +4,7 @@ from yolali.ops.anchors import make_anchors
 from yolali.ops.boxes import (
     IoUKind,
     box_iou,
+    broadcast_iou,
     cxcywh_to_xyxy,
     elementwise_iou,
     ltrb_to_xyxy,
@@ -17,6 +18,7 @@ __all__ = [
     "IoUKind",
     "batched_nms",
     "box_iou",
+    "broadcast_iou",
     "cxcywh_to_xyxy",
     "decode_boxes",
     "dfl_expectation",

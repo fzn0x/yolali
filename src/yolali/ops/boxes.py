@@ -55,7 +55,7 @@ def xyxy_to_ltrb(anchors: Tensor, boxes: Tensor) -> Tensor:
     return torch.stack((ax - x1, ay - y1, x2 - ax, y2 - ay), dim=-1)
 
 
-def _iou_core(a: Tensor, b: Tensor, kind: IoUKind) -> Tensor:
+def broadcast_iou(a: Tensor, b: Tensor, kind: IoUKind) -> Tensor:
     """IoU variant for broadcastable ``(..., 4)`` box tensors -> ``(...)``.
 
     Shared by :func:`box_iou` (all pairs) and :func:`elementwise_iou` (1:1) so
@@ -105,9 +105,9 @@ def box_iou(a: Tensor, b: Tensor, kind: IoUKind = "iou") -> Tensor:
     Returns:
         ``(N, M)`` matrix; entry ``[i, j]`` is the IoU of ``a[i]`` and ``b[j]``.
     """
-    return _iou_core(a.unsqueeze(-2), b.unsqueeze(-3), kind)
+    return broadcast_iou(a.unsqueeze(-2), b.unsqueeze(-3), kind)
 
 
 def elementwise_iou(a: Tensor, b: Tensor, kind: IoUKind = "iou") -> Tensor:
     """Row-wise IoU of two equally shaped ``(..., 4)`` tensors -> ``(...)``."""
-    return _iou_core(a, b, kind)
+    return broadcast_iou(a, b, kind)
