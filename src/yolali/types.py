@@ -74,3 +74,28 @@ class Targets:
     def to(self, device: torch.device | str) -> Targets:
         """Move every tensor to ``device``."""
         return Targets(self.boxes.to(device), self.classes.to(device), self.mask.to(device))
+
+
+@dataclass(frozen=True)
+class RawPrediction:
+    """Detection-head output for one batch, all levels flattened in stride order.
+
+    Attributes:
+        box_raw: ``(B, A, 4 * reg_max)`` DFL logits or ``(B, A, 4)`` direct.
+        cls_logits: ``(B, A, nc)`` pre-sigmoid.
+        anchors: ``(A, 2)`` anchor centres in pixels.
+        strides: ``(A, 1)`` stride of each anchor.
+    """
+
+    box_raw: Tensor
+    cls_logits: Tensor
+    anchors: Tensor
+    strides: Tensor
+
+
+@dataclass(frozen=True)
+class DualRawPrediction:
+    """Training-time output of a dual head: one-to-many and one-to-one branches."""
+
+    o2m: RawPrediction
+    o2o: RawPrediction

@@ -10,11 +10,15 @@ import torch
 
 from yolali.loss import DetectionLoss, DualLoss, LossConfig
 from yolali.ops import make_anchors
-from yolali.types import Targets
+from yolali.types import DualRawPrediction, RawPrediction, Targets
 
 LN2 = math.log(2.0)
 ANCHORS, STRIDES = make_anchors([(1, 1)], [8])
 SOFTPLUS_INV_HALF = math.log(math.exp(0.5) - 1)  # softplus(x) = 0.5 -> 4 px at stride 8
+
+
+def raw(box_raw: torch.Tensor, cls_logits: torch.Tensor) -> RawPrediction:
+    return RawPrediction(box_raw, cls_logits, ANCHORS, STRIDES)
 
 
 def one_box(xyxy: list[float], cls: int = 0) -> Targets:
@@ -29,7 +33,7 @@ def test_direct_regression_exact_prediction_leaves_only_cls_term():
     loss = DetectionLoss(cfg, num_classes=1)
     box_raw = torch.full((1, 1, 4), SOFTPLUS_INV_HALF)
     cls_logits = torch.zeros(1, 1, 1)
-    out = loss(box_raw, cls_logits, ANCHORS, STRIDES, one_box([0.0, 0.0, 8.0, 8.0]))
+    out = loss(raw(box_raw, cls_logits), one_box([0.0, 0.0, 8.0, 8.0]))
     assert out.num_fg == 1
     assert out.box.item() == pytest.approx(0.0, abs=1e-5)
     assert out.cls.item() == pytest.approx(LN2, abs=1e-6)
@@ -48,7 +52,7 @@ def test_dfl_exact_expectation_costs_ln2_per_side():
     for side in range(4):
         box_raw[0, 0, side * reg_max] = 20.0
         box_raw[0, 0, side * reg_max + 1] = 20.0
-    out = loss(box_raw, torch.zeros(1, 1, 1), ANCHORS, STRIDES, one_box([0.0, 0.0, 8.0, 8.0]))
+    out = loss(raw(box_raw, torch.zeros(1, 1, 1)), one_box([0.0, 0.0, 8.0, 8.0]))
     assert out.box.item() == pytest.approx(0.0, abs=1e-4)
     assert out.cls.item() == pytest.approx(LN2, abs=1e-6)
     assert out.dfl.item() == pytest.approx(LN2, abs=1e-4)
@@ -64,7 +68,7 @@ def test_direct_regression_undersized_prediction():
     cfg = LossConfig(reg_max=0)
     loss = DetectionLoss(cfg, num_classes=1)
     box_raw = torch.full((1, 1, 4), SOFTPLUS_INV_HALF)
-    out = loss(box_raw, torch.zeros(1, 1, 1), ANCHORS, STRIDES, one_box([0.0, 0.0, 16.0, 16.0]))
+    out = loss(raw(box_raw, torch.zeros(1, 1, 1)), one_box([0.0, 0.0, 16.0, 16.0]))
     assert out.cls.item() == pytest.approx(LN2, abs=1e-6)
     assert out.box.item() == pytest.approx(0.203125, abs=1e-5)
     assert out.total.item() == pytest.approx(7.5 * 0.203125 + 0.5 * LN2, abs=1e-5)
@@ -76,7 +80,7 @@ def test_no_positives_gives_cls_only_and_stays_differentiable():
     loss = DetectionLoss(cfg, num_classes=2)
     box_raw = torch.zeros(1, 1, 4, requires_grad=True)
     cls_logits = torch.zeros(1, 1, 2, requires_grad=True)
-    out = loss(box_raw, cls_logits, ANCHORS, STRIDES, one_box([100.0, 100.0, 120.0, 120.0]))
+    out = loss(raw(box_raw, cls_logits), one_box([100.0, 100.0, 120.0, 120.0]))
     assert out.num_fg == 0
     assert out.box.item() == 0.0 and out.dfl.item() == 0.0
     # Two negatives at p = .5 -> 2 ln2, divided by mass clamp 1.
@@ -89,16 +93,11 @@ def test_batch_size_scales_total():
     cfg = LossConfig(reg_max=0)
     loss = DetectionLoss(cfg, num_classes=1)
     single = loss(
-        torch.full((1, 1, 4), SOFTPLUS_INV_HALF),
-        torch.zeros(1, 1, 1),
-        ANCHORS,
-        STRIDES,
+        raw(torch.full((1, 1, 4), SOFTPLUS_INV_HALF), torch.zeros(1, 1, 1)),
         one_box([0.0, 0.0, 8.0, 8.0]),
     )
     targets = Targets.from_list([torch.tensor([[0.0, 0.0, 8.0, 8.0]])] * 2, [torch.tensor([0])] * 2)
-    double = loss(
-        torch.full((2, 1, 4), SOFTPLUS_INV_HALF), torch.zeros(2, 1, 1), ANCHORS, STRIDES, targets
-    )
+    double = loss(raw(torch.full((2, 1, 4), SOFTPLUS_INV_HALF), torch.zeros(2, 1, 1)), targets)
     # Per-term values are averages over target mass (2 here), total multiplies by B.
     assert double.cls.item() == pytest.approx(single.cls.item(), abs=1e-6)
     assert double.total.item() == pytest.approx(2 * single.total.item(), abs=1e-5)
@@ -108,10 +107,7 @@ def test_varifocal_option_changes_only_cls():
     bce = DetectionLoss(LossConfig(reg_max=0, cls_loss="bce"), 1)
     vfl = DetectionLoss(LossConfig(reg_max=0, cls_loss="vfl"), 1)
     args = (
-        torch.full((1, 1, 4), SOFTPLUS_INV_HALF),
-        torch.zeros(1, 1, 1),
-        ANCHORS,
-        STRIDES,
+        raw(torch.full((1, 1, 4), SOFTPLUS_INV_HALF), torch.zeros(1, 1, 1)),
         one_box([0.0, 0.0, 8.0, 8.0]),
     )
     a, b = bce(*args), vfl(*args)
@@ -123,9 +119,8 @@ def test_varifocal_option_changes_only_cls():
 def test_dual_loss_combines_branches():
     cfg = LossConfig(reg_max=0, o2o_weight=0.5)
     loss = DualLoss(cfg, num_classes=1)
-    raw = torch.full((1, 1, 4), SOFTPLUS_INV_HALF)
-    logits = torch.zeros(1, 1, 1)
-    out = loss((raw, logits), (raw, logits), ANCHORS, STRIDES, one_box([0.0, 0.0, 8.0, 8.0]))
+    branch = raw(torch.full((1, 1, 4), SOFTPLUS_INV_HALF), torch.zeros(1, 1, 1))
+    out = loss(DualRawPrediction(branch, branch), one_box([0.0, 0.0, 8.0, 8.0]))
     assert out.o2m.total.item() == pytest.approx(0.5 * LN2, abs=1e-5)
     assert out.o2o.total.item() == pytest.approx(0.5 * LN2, abs=1e-5)
     assert out.total.item() == pytest.approx(0.5 * LN2 * 1.5, abs=1e-5)

@@ -12,30 +12,13 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
 
 import torch
 from torch import Tensor, nn
 
 from yolali.nn.blocks import Conv, make_divisible
 from yolali.ops.anchors import make_anchors
-
-
-@dataclass(frozen=True)
-class RawPrediction:
-    """Head output for one image batch, all levels flattened in stride order.
-
-    Attributes:
-        box_raw: ``(B, A, 4 * reg_max)`` DFL logits or ``(B, A, 4)`` direct.
-        cls_logits: ``(B, A, nc)`` pre-sigmoid.
-        anchors: ``(A, 2)`` anchor centres in pixels.
-        strides: ``(A, 1)`` stride of each anchor.
-    """
-
-    box_raw: Tensor
-    cls_logits: Tensor
-    anchors: Tensor
-    strides: Tensor
+from yolali.types import RawPrediction
 
 
 class DetectHead(nn.Module):

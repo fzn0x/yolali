@@ -12,7 +12,7 @@ from yolali.loss.cls import bce_loss, varifocal_loss
 from yolali.loss.config import LossConfig
 from yolali.ops.boxes import xyxy_to_ltrb
 from yolali.ops.decode import decode_boxes
-from yolali.types import Targets
+from yolali.types import RawPrediction, Targets
 
 
 @dataclass(frozen=True)
@@ -62,7 +62,11 @@ class DetectionLoss(nn.Module):
         self.num_classes = num_classes
         self.assigner = assigner or TaskAlignedAssigner(cfg.tal_topk, cfg.tal_alpha, cfg.tal_beta)
 
-    def forward(
+    def forward(self, pred: RawPrediction, targets: Targets) -> LossOutput:
+        """Loss of a head's raw output against padded ground truth in pixels."""
+        return self.compute(pred.box_raw, pred.cls_logits, pred.anchors, pred.strides, targets)
+
+    def compute(
         self,
         box_raw: Tensor,
         cls_logits: Tensor,
@@ -70,7 +74,7 @@ class DetectionLoss(nn.Module):
         strides: Tensor,
         targets: Targets,
     ) -> LossOutput:
-        """Compute the loss.
+        """Compute the loss from bare tensors.
 
         Args:
             box_raw: ``(B, A, 4 * reg_max)`` DFL logits, or ``(B, A, 4)`` when

@@ -15,7 +15,7 @@ from yolali.assign.o2o import OneToOneAssigner
 from yolali.assign.tal import TaskAlignedAssigner
 from yolali.loss.config import LossConfig
 from yolali.loss.detection import DetectionLoss, LossOutput, loss_terms_to_dict
-from yolali.types import Targets
+from yolali.types import DualRawPrediction, Targets
 
 
 @dataclass(frozen=True)
@@ -44,15 +44,8 @@ class DualLoss(nn.Module):
         )
         self.o2o = DetectionLoss(cfg, num_classes, OneToOneAssigner(cfg.tal_alpha, cfg.tal_beta))
 
-    def forward(
-        self,
-        o2m_outputs: tuple[Tensor, Tensor],
-        o2o_outputs: tuple[Tensor, Tensor],
-        anchors: Tensor,
-        strides: Tensor,
-        targets: Targets,
-    ) -> DualLossOutput:
-        """Each ``*_outputs`` is ``(box_raw, cls_logits)`` from that branch."""
-        o2m = self.o2m(o2m_outputs[0], o2m_outputs[1], anchors, strides, targets)
-        o2o = self.o2o(o2o_outputs[0], o2o_outputs[1], anchors, strides, targets)
+    def forward(self, pred: DualRawPrediction, targets: Targets) -> DualLossOutput:
+        """Both branches see the same targets; only their assigners differ."""
+        o2m = self.o2m(pred.o2m, targets)
+        o2o = self.o2o(pred.o2o, targets)
         return DualLossOutput(o2m.total + self.cfg.o2o_weight * o2o.total, o2m, o2o)

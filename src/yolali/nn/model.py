@@ -17,8 +17,8 @@ from yolali.nn.config import (
     ModelConfig,
     NeckBuilder,
 )
-from yolali.nn.head.detect import RawPrediction
 from yolali.ops.decode import decode_boxes
+from yolali.types import RawPrediction
 
 
 class YolaliModel(nn.Module):
