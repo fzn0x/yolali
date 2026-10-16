@@ -69,7 +69,8 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     for path, dets in zip(files, results, strict=True):
         summary = ", ".join(f"{dets.label(i)} {float(dets.conf[i]):.2f}" for i in range(len(dets)))
-        print(f"{path.name}: {len(dets)} objects" + (f" ({summary})" if summary else ""))
+        noun = "object" if len(dets) == 1 else "objects"
+        print(f"{path.name}: {len(dets)} {noun}" + (f" ({summary})" if summary else ""))
         if not args.no_save:
             drawn = draw_detections(to_rgb_array(path), dets)
             cv2.imwrite(str(args.out / path.name), cv2.cvtColor(drawn, cv2.COLOR_RGB2BGR))
