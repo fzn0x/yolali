@@ -1,9 +1,9 @@
 name: nightly
 
-# Smoke-trains the N-size GELAN model on COCO128 for a handful of epochs on
-# CPU and asserts that the smoothed loss decreases. The 50-epoch gate in
-# docs/plan.md runs on a GPU; this job only guards against regressions that
-# break training outright.
+# Smoke-trains GELAN-N on COCO128 for three epochs on CPU and asserts the
+# loss went down, then checks the converter mapping against the committed
+# reference key table. The 50-epoch gate in docs/plan.md runs on a GPU; this
+# job guards against regressions that break training outright.
 
 on:
   schedule:
@@ -13,23 +13,33 @@ on:
 jobs:
   coco128-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-
-      - name: Sync environment (CPU torch)
+      - name: Sync (CPU torch)
         run: uv sync
-
-      - name: Smoke train
-        # Wired up in phase 4; until then this step is a no-op so the
-        # workflow stays green and visible.
+      - name: Download COCO128
+        run: uv run scripts/download_datasets.py coco128
+      - name: Smoke train (3 epochs, 320 px, CPU)
         run: |
-          if [ -f scripts/train.py ]; then
-            uv run pytest -m slow tests/train/test_smoke_coco128.py
-          else
-            echo "scripts/train.py not present yet; skipping"
-          fi
+          uv run scripts/train.py --model configs/models/gelan-n.yaml \
+            --data configs/data/coco128.yaml --epochs 3 --batch-size 8 \
+            --img-size 320 --workers 2 --close-mosaic 0 --no-amp --val-every 0 \
+            --device cpu --out runs/nightly
+      - name: Assert the loss decreased
+        run: |
+          uv run python - <<'EOF'
+          import csv
+          rows = [r for r in csv.DictReader(open("runs/nightly/metrics.csv")) if r.get("epoch/total")]
+          losses = [float(r["epoch/total"]) for r in rows]
+          print("epoch losses:", losses)
+          assert len(losses) == 3 and losses[-1] < losses[0], "loss did not decrease"
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-metrics
+          path: runs/nightly/metrics.csv
