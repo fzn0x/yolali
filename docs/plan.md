@@ -68,7 +68,7 @@ agree on COCO128 (converted both ways).
 **Gate:** suite green; COCO128 loads and a 16-image mosaic batch renders
 to `runs/debug/` for eyeballing (image committed to docs, not to tests).
 
-## Phase 4: Trainer and evaluator; gate 3 — in progress
+## Phase 4: Trainer and evaluator; gate 3 — gate 3 passed (52.5 vs 52.3), COCO128 run pending
 
 Files: `train/*.py`, `eval/*.py`, `scripts/train.py`, `scripts/val.py`.
 

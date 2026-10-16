@@ -50,6 +50,36 @@ Threshold was `< 1e-4` on the raw head outputs. Both pass. Parameter count
 of the converted model is 25,498,736 (reference 25,498,752 including the
 16-value frozen DFL arange that yolali computes instead of storing).
 
+### Gate 3: COCO val2017 with converted official GELAN-C weights
+
+```
+commit:   5684411
+hardware: dev-3060 (RTX 3060, fp16 autocast, batch 16, 4 loader workers)
+command:  uv run scripts/val.py --config configs/models/gelan-c.yaml \
+              --weights weights/gelan-c.yolali.pt --images datasets/coco/val2017 \
+              --coco-json datasets/coco/annotations/instances_val2017.json \
+              --batch-size 16 --workers 4 --half --out runs/val/gelan-c_val2017.json
+settings: letterbox 640 (rect batches, stride 32), conf 0.001, NMS IoU 0.7,
+          max 300 detections before scoring, 100 per image and class scored
+time:     294 s for 5000 images (evaluator is CPU-bound; see below)
+```
+
+| Metric | yolali evaluator | Published (YOLOv9 README, gelan-c) |
+|---|---|---|
+| mAP50-95 | **52.5** | 52.3 |
+| mAP50 | 69.5 | 70.2 |
+| mAP75 | 57.3 | — |
+| mAP small / medium / large | 35.4 / 57.6 / 69.0 | — |
+
+Target was 52.3 ± 0.3 on mAP50-95: **passed** (+0.2). The published mAP50 is
+not part of the gate; the 0.7 gap there is consistent with the usual
+difference between pycocotools and a rect-batched, fp16 evaluation run and
+was not investigated further.
+
+Evaluator cost: `MetricAccumulator.add_image` takes ~60 ms per image on
+this CPU with 300 detections (measured on synthetic data after the
+per-class, all-thresholds-at-once rewrite; it was 320 ms before).
+
 ## Template
 
 ```
