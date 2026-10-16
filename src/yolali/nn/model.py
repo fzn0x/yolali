@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Literal
 
 import torch
 from torch import Tensor, nn
@@ -70,6 +71,24 @@ class YolaliModel(nn.Module):
         for child in self.children():
             fuse_all(child)
         return self
+
+    def export(
+        self,
+        format: Literal["onnx", "torchscript"],
+        path: str | Path,
+        *,
+        img_size: int | tuple[int, int] = 640,
+        max_det: int = 300,
+        **kwargs: Any,  # noqa: ANN401 - forwarded to the exporter
+    ) -> Path:
+        """Write an ONNX or TorchScript file; see :mod:`yolali.export`."""
+        from yolali.export import export_onnx, export_torchscript  # noqa: PLC0415 - avoid import cycle
+
+        if format == "onnx":
+            return export_onnx(self, path, img_size=img_size, max_det=max_det, **kwargs)
+        if format == "torchscript":
+            return export_torchscript(self, path, img_size=img_size, max_det=max_det)
+        raise ValueError(f"unknown export format {format!r}")
 
 
 def build_model(
