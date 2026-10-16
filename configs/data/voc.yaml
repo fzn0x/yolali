@@ -1,0 +1,7 @@
+# Pascal VOC: VOC2007+2012 trainval for training, VOC2007 test for validation
+# (scripts/download_datasets.py voc converts the XML annotations to YOLO txt).
+train: datasets/voc/images/train
+val: datasets/voc/images/val
+nc: 20
+names: [aeroplane, bicycle, bird, boat, bottle, bus, car, cat, chair, cow, diningtable, dog,
+  horse, motorbike, person, pottedplant, sheep, sofa, train, tvmonitor]
