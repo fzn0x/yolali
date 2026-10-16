@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Project artefacts
+runs/
+weights/
+*.pt
+*.pth
+*.onnx
+*.torchscript
+*.cache
+datasets/
+!datasets/README.md
+wandb/
+site/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
