@@ -18,7 +18,7 @@ from yolali.nn.config import (
     NeckBuilder,
 )
 from yolali.ops.decode import decode_boxes
-from yolali.types import RawPrediction
+from yolali.types import DualRawPrediction, RawPrediction
 
 
 class YolaliModel(nn.Module):
@@ -45,10 +45,19 @@ class YolaliModel(nn.Module):
     @property
     def reg_max(self) -> int:
         """DFL bins of the head (``0`` for direct regression)."""
-        return self.cfg.head.get_int("reg_max", 16)
+        return self.cfg.head.get_int("reg_max", 0 if self.cfg.head.type == "dual" else 16)
 
-    def forward(self, x: Tensor) -> RawPrediction:
-        """Raw per-anchor predictions; decode with :meth:`decode`."""
+    @property
+    def nms_free(self) -> bool:
+        """``True`` when inference uses the one-to-one head and needs no NMS."""
+        return self.cfg.head.type == "dual"
+
+    def forward(self, x: Tensor) -> RawPrediction | DualRawPrediction:
+        """Raw per-anchor predictions; decode with :meth:`decode`.
+
+        A dual head returns :class:`DualRawPrediction` while training and a
+        plain :class:`RawPrediction` (its one-to-one branch) in ``eval()``.
+        """
         return self.head(self.neck(self.backbone(x)))
 
     def decode(self, pred: RawPrediction) -> tuple[Tensor, Tensor]:

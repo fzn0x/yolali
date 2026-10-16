@@ -25,6 +25,7 @@ from torch import nn
 
 from yolali.nn.backbone.gelan import GELANBackbone
 from yolali.nn.head.detect import DetectHead
+from yolali.nn.head.dual import DualDetectHead
 from yolali.nn.interfaces import Backbone, Channels, Neck, Strides
 from yolali.nn.neck.gelan_pan import GELANPAN
 
@@ -108,4 +109,18 @@ def _build_detect(
 
 BACKBONES: dict[str, BackboneBuilder] = {"gelan": _build_gelan}
 NECKS: dict[str, NeckBuilder] = {"gelan_pan": _build_gelan_pan}
-HEADS: dict[str, HeadBuilder] = {"detect": _build_detect}
+
+
+def _build_dual(
+    cfg: ComponentConfig, in_channels: Channels, nc: int, strides: Strides
+) -> nn.Module:
+    return DualDetectHead(
+        in_channels,
+        nc,
+        cfg.get_int("reg_max", 0),
+        strides,
+        detach_o2o=bool(cfg.options.get("detach_o2o", True)),
+    )
+
+
+HEADS: dict[str, HeadBuilder] = {"detect": _build_detect, "dual": _build_dual}

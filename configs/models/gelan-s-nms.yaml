@@ -1,0 +1,6 @@
+# GELAN-s-nms: classic one-to-many DFL head, evaluated with NMS (comparison baseline).
+name: gelan-s-nms
+nc: 80
+backbone: { type: gelan, width: 0.50, depth: 0.33 }
+neck: { type: gelan_pan, width: 0.50, depth: 0.33 }
+head: { type: detect, reg_max: 16 }

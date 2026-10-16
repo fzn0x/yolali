@@ -1,8 +1,8 @@
-# GELAN-n: width 0.25, depth 0.33 scaling of the GELAN-C topology (docs/design.md 4.5, D6).
-# Classic one-to-many head with DFL; swap head.type to "dual" and reg_max to 0
-# for NMS-free, direct-regression training (available from phase 5).
+# GELAN-n (default): NMS-free dual head with direct ltrb regression (docs/design.md 4.6).
+# Width 0.25, depth 0.33 scaling of the GELAN-C topology. See gelan-n-nms.yaml for the
+# classic one-to-many DFL head evaluated with NMS.
 name: gelan-n
 nc: 80
 backbone: { type: gelan, width: 0.25, depth: 0.33 }
 neck: { type: gelan_pan, width: 0.25, depth: 0.33 }
-head: { type: detect, reg_max: 16 }
+head: { type: dual, reg_max: 0 }

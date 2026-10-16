@@ -19,7 +19,7 @@ def n_params(m: torch.nn.Module) -> int:
 
 @pytest.fixture(scope="module")
 def gelan_n() -> YolaliModel:
-    return build_model(ModelConfig.from_yaml(CONFIGS / "gelan-n.yaml")).eval()
+    return build_model(ModelConfig.from_yaml(CONFIGS / "gelan-n-nms.yaml")).eval()
 
 
 def test_gelan_c_parameter_count_matches_reference():
@@ -60,7 +60,7 @@ def test_rectangular_input(gelan_n: YolaliModel):
 
 def test_fuse_preserves_outputs(gelan_n: YolaliModel):
     torch.manual_seed(0)
-    model = build_model(ModelConfig.from_yaml(CONFIGS / "gelan-n.yaml")).eval()
+    model = build_model(ModelConfig.from_yaml(CONFIGS / "gelan-n-nms.yaml")).eval()
     for bn in model.modules():
         if isinstance(bn, torch.nn.BatchNorm2d):
             with torch.no_grad():
