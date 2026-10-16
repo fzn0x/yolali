@@ -1,0 +1,15 @@
+# ViT-S: DINOv2 ViT-S/14 (Apache-2.0 weights) run at patch 16, Spatial Tuning Adapter
+# (docs/design.md 4.14), GELAN PAN neck at half width, NMS-free dual head.
+# Swap `model` for vit_small_patch16_dinov3.lvd1689m to use DINOv3 (Meta DINOv3 license).
+name: vit-s
+nc: 80
+backbone:
+  type: vit
+  model: vit_small_patch14_dinov2.lvd142m
+  patch_size: 16
+  img_size: 640
+  pretrained: true
+  freeze: false
+  out_channels: [128, 256, 384]
+neck: { type: gelan_pan, width: 0.5, depth: 0.33 }
+head: { type: dual, reg_max: 0 }

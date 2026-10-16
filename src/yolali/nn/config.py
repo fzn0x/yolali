@@ -107,7 +107,22 @@ def _build_detect(
     return DetectHead(in_channels, nc, cfg.get_int("reg_max", 16), strides)
 
 
-BACKBONES: dict[str, BackboneBuilder] = {"gelan": _build_gelan}
+def _build_vit(cfg: ComponentConfig) -> Backbone:
+    from yolali.nn.backbone.vit import ViTBackbone  # noqa: PLC0415 - keeps timm optional
+
+    channels = cfg.options.get("out_channels", (128, 256, 384))
+    c3, c4, c5 = (int(c) for c in channels)
+    return ViTBackbone(
+        str(cfg.options.get("model", "vit_small_patch14_dinov2.lvd142m")),
+        (c3, c4, c5),
+        img_size=cfg.get_int("img_size", 640),
+        patch_size=cfg.get_int("patch_size", 16),
+        pretrained=bool(cfg.options.get("pretrained", True)),
+        freeze=bool(cfg.options.get("freeze", False)),
+    )
+
+
+BACKBONES: dict[str, BackboneBuilder] = {"gelan": _build_gelan, "vit": _build_vit}
 NECKS: dict[str, NeckBuilder] = {"gelan_pan": _build_gelan_pan}
 
 
