@@ -1,0 +1,22 @@
+yolali
+Copyright 2026 yolali contributors
+
+This product is an independent, clean-room implementation licensed under
+the Apache License, Version 2.0.
+
+Architectural ideas are adopted, with attribution, from:
+
+  - YOLOv9 / GELAN / PGI by Chien-Yao Wang, I-Hau Yeh and Hong-Yuan Mark
+    Liao (WongKinYiu), arXiv:2402.13616. The reference repository
+    https://github.com/WongKinYiu/yolov9 is GPL-3.0; it was read for
+    understanding and for checkpoint-format details only. No source code
+    was copied from it.
+  - YOLOv10 (consistent dual label assignment, NMS-free), arXiv:2405.14458.
+  - D-FINE, arXiv:2410.13842 (Apache-2.0).
+  - DEIMv2 "Real-Time Object Detection Meets DINOv3", arXiv:2509.20787
+    (Apache-2.0).
+  - RF-DETR, https://github.com/roboflow/rf-detr (Apache-2.0).
+
+Pretrained GELAN / YOLOv9 weights that the converter in `yolali.zoo` can
+read are distributed by the YOLOv9 authors under GPL-3.0 and are NOT part
+of this distribution.
