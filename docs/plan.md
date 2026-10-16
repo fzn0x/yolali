@@ -86,7 +86,7 @@ Steps:
 **Gate 4 (part 1):** COCO128 smoothed loss monotone decreasing, mAP50 > 0.3.
 Both recorded in `BENCHMARKS.md` with command, commit, hardware, time.
 
-## Phase 5: NMS-free dual head and direct regression; gate 6
+## Phase 5: NMS-free dual head and direct regression; gate 6 — code done, VOC runs pending
 
 Files: `nn/head/dual.py`, `loss/dual.py`, direct decode in `decode.py`,
 `configs/models/*` switched to `head: dual, reg_max: 0` for N/S/M.
@@ -103,7 +103,7 @@ Steps:
 fails, investigate the assigner (metric normalisation, o2o tie-breaking)
 before anything else; document findings in `design.md`.
 
-## Phase 6: ViT backbone with Spatial Tuning Adapter
+## Phase 6: ViT backbone with Spatial Tuning Adapter — code done, VOC run pending
 
 Files: `nn/backbone/vit.py`, `nn/backbone/sta.py`,
 `configs/models/vit-{s,m}.yaml`.
@@ -115,7 +115,7 @@ parameter count; frozen-backbone flag leaves ViT grads `None`.
 `BENCHMARKS.md` (no numeric target set in the brief; the number is
 reported as measured).
 
-## Phase 7: export and inference API
+## Phase 7: export and inference API — done (gate 5 passed on unit models; recorded after the VOC runs on trained weights)
 
 Files: `infer/*.py`, `export/*.py`, `scripts/detect.py`,
 `scripts/export.py`, `YolaliModel.export`.

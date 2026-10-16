@@ -6,7 +6,7 @@ This document is the contract between the code and its readers. Every
 component boundary below has a "why". When the implementation and this file
 disagree, one of them is wrong and the fix is a commit that changes both.
 
-Status: **v0, phase 3 complete** (ops, assign, loss, GELAN model, converter, data pipeline; gate 2 passed, see `BENCHMARKS.md`). Sections marked *(phase N)* describe what
+Status: **v0, code for phases 1-7 in place**; gates recorded in `BENCHMARKS.md` as they pass. Sections marked *(phase N)* describe what
 will exist after that phase of [`plan.md`](plan.md). Nothing here claims a
 measured number; those live only in `BENCHMARKS.md`.
 
@@ -315,10 +315,14 @@ flattened and concatenated in stride order. Decoding is *not* done here.
 See `ops/decode.py` (4.1): the head calls `decode_boxes` and nothing else.
 
 `DualDetectHead` holds two `DetectHead`s on the same neck features: `o2m`
-and `o2o`. During training it returns both. In `eval()` mode it returns
-only `o2o`. The o2o branch is a full copy (not shared convs). *Why:* YOLOv10
-shares nothing but the neck either; sharing would couple the two
-assignment regimes and muddy the gate-6 comparison.
+and `o2o`. During training it returns `DualRawPrediction(o2m, o2o)`; in
+`eval()` mode it returns only the `o2o` `RawPrediction`, so every consumer
+(evaluator, `Detector`, export) sees one head type. The o2o branch is a full
+copy (not shared convs) and, by default, consumes **detached** neck
+features. *Why:* YOLOv10 shares nothing but the neck either, and detaching
+lets the richer one-to-many supervision shape the backbone while the
+one-to-one head only learns to pick its single anchor on top (D3).
+`detach_o2o: false` in the YAML turns this off for experiments.
 
 Inference postprocess for the o2o path: `scores = sigmoid(cls)`, take
 `max_det` anchors by max class score via `topk`, threshold at `conf`. No
@@ -518,10 +522,13 @@ class Detections:
     names: tuple[str, ...] | None = None
 ```
 
-`Detector(model, device="auto", half=False)` accepts paths, `np.ndarray`
-HWC uint8, PIL images, or a `(B,3,H,W)` tensor. It letterboxes, runs the
-model, undoes letterbox, and returns `list[Detections]`. `conf`, `iou` (NMS
-path only), and `max_det` are `predict()` arguments.
+`Detector(model, device="auto", half=False, fuse=True, names=None)` accepts
+paths, `np.ndarray` HWC uint8, PIL images, or `(3,H,W)` tensors, singly or
+in a sequence. It letterboxes to a square, runs the model, applies the
+same `postprocess` as the evaluator (NMS or plain top-k depending on
+`model.nms_free`), undoes the letterbox, and returns `list[Detections]`
+in original pixels. `conf`, `iou` (NMS path only), `max_det` and `size` are
+`predict()` arguments. `draw_detections` renders boxes for the CLI.
 
 ### 4.13 `export` *(phase 7)*
 
@@ -533,7 +540,11 @@ caller). We use the TorchScript-based exporter (`dynamo=False`) because its
 op coverage for this graph is complete and stable across 2.4–2.x.
 
 Parity test: ONNX Runtime CPU vs PyTorch CPU on the same input,
-`max |a - b| < 1e-4` for the direct-regression dual head.
+`max |a - b| < 1e-4` for both head types, plus a check that every node
+lives in the default ONNX domain (no custom ops). We use the
+`torch.export`-based exporter (`dynamo=True`, opset 18), which is the
+PyTorch default since 2.9; the TorchScript exporter is deprecated. The
+same `ExportWrapper` is traced for TorchScript.
 
 ### 4.14 ViT backbone with Spatial Tuning Adapter *(phase 6)*
 
@@ -551,9 +562,14 @@ P3 = Conv3x3(c3)(ConvTranspose2d(c_in, c3, k=2, s=2)(x16))
 P5 = Conv3x3 s2 (c_in, c5)(x16)
 ```
 
-Each branch is followed by one `RepCSPELAN`-free `Conv` so the adapter stays
-tiny. The ViT weights may be frozen (`freeze_backbone=True`) for the first
-`k` epochs via a `Trainer` hook. See Deviations D4.
+Each branch is followed by one `3x3` `Conv` so the adapter stays tiny. The
+ViT weights may be frozen for the whole run (`freeze: true`, which also
+keeps the transformer in eval mode); a staged unfreeze is left to the user
+(D4). The ViT is created through `timm` with `dynamic_img_size=True` so
+positional embeddings are interpolated for any multiple-of-32 input, and
+`patch_size=16` so DINOv2's patch-14 embedding is resampled to the stride
+the neck expects. `nn/config.py` imports the ViT lazily, so `timm` stays an
+optional extra.
 
 License note: DINOv2 weights are Apache-2.0; DINOv3 weights carry Meta's
 DINOv3 license. The default config uses DINOv2.
@@ -573,9 +589,11 @@ Each entry: what the source says (or does not say), what we chose, why.
   units: smooth, standard ONNX op, no dead gradient at zero (unlike
   `relu`), no overflow (unlike `exp`). Loss is computed on decoded boxes,
   so the choice only affects optimisation dynamics.
-- **D3. One-to-one branch is a full head copy.** YOLOv10 describes the o2o
-  head as a separate branch; whether its stem convs are shared is an
-  implementation detail. We share nothing beyond the neck.
+- **D3. One-to-one branch is a full head copy on detached features.**
+  YOLOv10 describes the o2o head as a separate branch; whether its stem
+  convs are shared, and whether its gradient reaches the neck, are
+  implementation details. We share nothing beyond the neck and detach the
+  neck features for the o2o branch so only the o2m head trains the trunk.
 - **D4. STA details.** DEIMv2 describes the Spatial Tuning Adapter at the
   block-diagram level. We implement the simplest pyramid: a 2× transposed
   conv for P3, a 1×1 for P4, a stride-2 conv for P5, each followed by one
@@ -612,7 +630,7 @@ Each entry: what the source says (or does not say), what we chose, why.
 - ProgLoss, STAL, distillation from the ViT path to the CNN path (DEIMv2
   style).
 - Segmentation and pose heads behind the same `Head` interface.
-- `torch.export`-based ONNX path once its op coverage is stable.
+- Staged unfreezing schedule for the ViT backbone.
 
 ---
 
