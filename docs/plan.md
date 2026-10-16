@@ -55,7 +55,7 @@ Steps:
 **Gate 2:** equivalence test passes for `gelan-c.pt` and
 `yolov9-c-converted.pt`.
 
-## Phase 3: data pipeline
+## Phase 3: data pipeline — done
 
 Files: `data/formats/*.py`, `data/cache.py`, `data/transforms/*.py`,
 `data/dataset.py`, `data/collate.py`, `scripts/download_datasets.py`.

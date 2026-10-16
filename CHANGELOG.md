@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `yolali.data`: YOLO txt and COCO json readers, fingerprinted label cache,
+  composable transforms (letterbox, mosaic, mixup, HSV, perspective, flips),
+  `DetectionDataset`, `collate_samples`, `RectBatchSampler`;
+  `scripts/download_datasets.py` and `scripts/debug_batch.py`.
 - `yolali.nn`: GELAN blocks (`Conv`, `RepConv`, `RepCSP`, `RepCSPELAN`,
   `ADown`, `SPPELAN`) with BN/RepConv fusion, `GELANBackbone`, `GELANPAN`
   neck, `DetectHead` (DFL or direct regression), YAML `ModelConfig` and

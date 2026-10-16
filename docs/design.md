@@ -6,7 +6,7 @@ This document is the contract between the code and its readers. Every
 component boundary below has a "why". When the implementation and this file
 disagree, one of them is wrong and the fix is a commit that changes both.
 
-Status: **v0, phase 2 complete** (ops, assign, loss, GELAN model, converter; gate 2 passed, see `BENCHMARKS.md`). Sections marked *(phase N)* describe what
+Status: **v0, phase 3 complete** (ops, assign, loss, GELAN model, converter, data pipeline; gate 2 passed, see `BENCHMARKS.md`). Sections marked *(phase N)* describe what
 will exist after that phase of [`plan.md`](plan.md). Nothing here claims a
 measured number; those live only in `BENCHMARKS.md`.
 
@@ -404,25 +404,35 @@ class Sample:
     boxes: np.ndarray        # (N, 4) float32 xyxy pixels
     classes: np.ndarray      # (N,) int64
     path: str
+    orig_hw: tuple[int, int] # before any transform
+    scale: float             # cumulative resize factor
+    pad: tuple[float, float] # (left, top) letterbox padding
 ```
 
 Readers (`formats/yolo_txt.py`, `formats/coco_json.py`) return
-`list[LabelRecord]` (path, size, boxes, classes) *without* loading pixels.
-`cache.py` stores that list in `labels.cache` next to the image dir, keyed by
-`sha1(sorted(paths) + sizes + mtimes + reader_version)`. Any mismatch
-rebuilds.
+`list[LabelRecord]` (path, size, boxes, classes, crowd flags) *without*
+loading pixels. `cache.py` stores that list in a `.cache` file keyed by
+`sha1(sorted(path, size, mtime_ns) + reader_version)`. Any mismatch rebuilds;
+a corrupt cache is silently rebuilt too.
 
-Transforms are callables `Sample -> Sample` composed by `Compose`. The ones
-that need other images (`Mosaic`, `MixUp`) receive a `sampler:
-Callable[[], Sample]` at construction, so the dataset stays a plain
-`__getitem__`. `Letterbox(size, auto, stride)` returns the sample plus the
-`(scale, pad)` needed to undo it.
+Transforms are callables `(Sample, np.random.Generator) -> Sample` composed
+by `Compose`. **Every random draw comes from the generator argument**, and
+the dataset derives one generator per `(seed, epoch, index)`, so a sample is
+reproducible and two workers never share state. The transforms that need
+other images (`Mosaic`, `MixUp`) receive a `sampler: Callable[[Generator],
+Sample]` at construction, so the dataset stays a plain `__getitem__`.
+`Letterbox(size, auto, stride)` records `scale` and `pad` on the sample;
+`undo_letterbox` inverts them.
 
-Order used by the default training pipeline:
-`Mosaic → RandomPerspective → MixUp → HSV → RandomFlip → Letterbox → ToTensor`.
+Default training pipeline (`default_train_transforms`):
+`Mosaic(2s×2s canvas) → RandomPerspective(border=-s/2 → s×s) → Letterbox →
+MixUp(partner = same geometry pipeline) → HSV → flips`. Validation is
+`Letterbox` only. Tensors are made in `collate_samples`, not in a transform,
+so a `Sample` is always a numpy object a reader can print.
 
-`RectBatchSampler` groups images by aspect ratio so a batch letterboxes to
-the minimal rectangle; used for validation and optionally training.
+`RectBatchSampler` sorts images by aspect ratio and computes one `(H, W)`
+per batch (multiples of `stride`); the dataset applies it through
+`rect_shapes` after the transform pipeline. Used for validation.
 
 ### 4.10 `train` *(phase 4)*
 
