@@ -80,6 +80,39 @@ Evaluator cost: `MetricAccumulator.add_image` takes ~60 ms per image on
 this CPU with 300 detections (measured on synthetic data after the
 per-class, all-thresholds-at-once rewrite; it was 320 ms before).
 
+### Gate 4a: COCO128 smoke train, GELAN-N (classic DFL head), 50 epochs, from scratch
+
+```
+commit:   44efd1b
+hardware: dev-3060 (bf16 autocast, batch 16, 4 loader workers)
+command:  uv run scripts/train.py --model configs/models/gelan-n-nms.yaml \
+              --data configs/data/coco128.yaml --epochs 50 --batch-size 16 \
+              --workers 4 --out runs/coco128-n-nms
+settings: SGD lr 0.01 cosine, warmup 100 iterations, mosaic until epoch 40,
+          EMA, 8 optimizer steps per epoch (400 total)
+time:     13 s per epoch (+ validation), ~15 min total
+```
+
+| Epoch | loss (sum, ×batch) | mAP50 | mAP50-95 |
+|---|---|---|---|
+| 1 | 217.0 | 0.000 | 0.000 |
+| 10 | 207.3 | 0.000 | 0.000 |
+| 20 | 171.9 | 0.003 | 0.001 |
+| 30 | 144.3 | 0.032 | 0.012 |
+| 40 | 124.0 | 0.050 | 0.023 |
+| 50 | 116.6 | **0.069** | 0.032 |
+
+Loss, smoothed over a 5-epoch window, decreased at every one of the 49
+steps: **passed**. mAP50 after 50 epochs is 0.069 against a target of 0.3:
+**not met from random initialisation**. 128 images × 50 epochs is 400
+optimizer steps; the curve is still rising steeply (0.050 → 0.069 over the
+last ten epochs) and nothing in the run suggests a defect, but no nano
+detector reaches 0.3 mAP50 from scratch in that budget. The usual COCO128
+tutorials start from COCO-pretrained weights. A fine-tuning run from the
+converted GELAN-C weights is recorded below as gate 4a′ so the loop is
+shown reaching a high mAP; it is a weaker check because those weights have
+seen COCO128's images during their original training.
+
 ## Template
 
 ```
