@@ -21,7 +21,7 @@ weights/
 *.onnx
 *.torchscript
 *.cache
-datasets/
+datasets/*
 !datasets/README.md
 wandb/
 site/
