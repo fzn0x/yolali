@@ -75,9 +75,9 @@ class Letterbox:
         boxes = sample.boxes.copy()
         boxes[:, [0, 2]] = boxes[:, [0, 2]] * scale + left
         boxes[:, [1, 3]] = boxes[:, [1, 3]] * scale + top
-        return sample.with_(
-            image=image, boxes=boxes, scale=sample.scale * scale, pad=(float(left), float(top))
-        )
+        # Compose with any earlier letterbox: x' = (x*s1 + p1)*s2 + p2.
+        pad = (sample.pad[0] * scale + left, sample.pad[1] * scale + top)
+        return sample.with_(image=image, boxes=boxes, scale=sample.scale * scale, pad=pad)
 
 
 def undo_letterbox(

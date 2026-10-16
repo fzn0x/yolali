@@ -57,8 +57,11 @@ class DetectionDataset(Dataset[Sample]):
         transform: a :class:`Transform`; ``None`` returns the resized sample.
         seed: base seed; each ``__getitem__`` derives its own generator from
             ``seed``, the index and ``epoch`` so runs are reproducible.
-        rect_shapes: optional per-index letterbox target ``(H, W)`` set by
-            :class:`~yolali.data.collate.RectBatchSampler`.
+        rect_shapes: optional per-index letterbox target ``(H, W)`` from
+            :class:`~yolali.data.collate.RectBatchSampler`. When given, the
+            dataset letterboxes to that shape *after* ``transform``, so the
+            transform must not letterbox itself (use ``transform=None`` for
+            plain validation).
     """
 
     def __init__(
@@ -111,14 +114,12 @@ class DetectionDataset(Dataset[Sample]):
 
     def __getitem__(self, index: int) -> Sample:
         sample = self.load_raw(index)
-        if self.transform is None:
-            return sample
         rng = self.rng_for(index)
-        if self.rect_shapes is not None:
-            # Rect mode: let a Letterbox at the end of the pipeline see this batch's shape.
+        if self.transform is not None:
             sample = self.transform(sample, rng)
-            return Letterbox(self.rect_shapes[index])(sample, rng)
-        return self.transform(sample, rng)
+        if self.rect_shapes is not None:
+            sample = Letterbox(self.rect_shapes[index])(sample, rng)
+        return sample
 
 
 def default_train_transforms(

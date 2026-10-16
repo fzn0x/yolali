@@ -73,9 +73,7 @@ def test_rect_batch_sampler_shapes_and_order(yolo_dataset: Path):
 def test_rect_mode_end_to_end(yolo_dataset: Path):
     records = read_yolo_txt(yolo_dataset / "images" / "train")
     sampler = RectBatchSampler([r.aspect_ratio for r in records], 1, 96, pad=0.0)
-    ds = DetectionDataset(
-        records, img_size=96, transform=default_val_transforms(96), rect_shapes=sampler.batch_shapes
-    )
+    ds = DetectionDataset(records, img_size=96, rect_shapes=sampler.batch_shapes)
     loader = DataLoader(ds, batch_sampler=sampler, collate_fn=collate_samples)
     shapes = [tuple(b.images.shape[-2:]) for b in loader]
     assert shapes == [(96, 96), (96, 96), (96, 64)]

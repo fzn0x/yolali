@@ -171,3 +171,13 @@ def test_compose_repr(sample: Sample):
     c = Compose([Letterbox(64), RandomFlip()])
     assert repr(c) == "Compose([Letterbox, RandomFlip])"
     assert c(sample, np.random.default_rng(0)).hw == (64, 64)
+
+
+def test_double_letterbox_composes_scale_and_pad(sample: Sample):
+    rng = np.random.default_rng(0)
+    once = Letterbox(320)(sample, rng)  # 120x160 -> 240x320 + pad top 40
+    twice = Letterbox((160, 160))(once, rng)  # 320x320 -> 160x160, scale .5
+    assert twice.scale == pytest.approx(1.0)
+    assert twice.pad == pytest.approx((0.0, 20.0))
+    back = undo_letterbox(torch.from_numpy(twice.boxes), twice.scale, twice.pad, sample.orig_hw)
+    assert torch.allclose(back, torch.from_numpy(sample.boxes), atol=0.5)
