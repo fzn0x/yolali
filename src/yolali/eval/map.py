@@ -16,6 +16,7 @@ import torch
 from torch import Tensor
 
 from yolali.eval.matching import IOU_THRESHOLDS, match_predictions
+from yolali.ops.boxes import unique_values
 
 RECALL_POINTS = np.linspace(0.0, 1.0, 101)
 AREA_RANGES: dict[str, tuple[float, float]] = {
@@ -181,7 +182,7 @@ class MetricAccumulator:
             pred_in = (pred_area >= lo) & (pred_area <= hi)
             # An unmatched prediction outside the range is ignored, not a false positive.
             ignore = ignore | (~pred_in.unsqueeze(1) & ~tp)
-            for c in range(self.num_classes):
+            for c in unique_values(torch.cat((pred_classes, gt_classes))):
                 store = self.stores[area][c]
                 store.n_gt += int(((gt_classes == c) & gt_in & ~crowd).sum())
                 sel = pred_classes == c

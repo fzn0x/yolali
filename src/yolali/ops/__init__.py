@@ -8,6 +8,7 @@ from yolali.ops.boxes import (
     cxcywh_to_xyxy,
     elementwise_iou,
     ltrb_to_xyxy,
+    unique_values,
     xyxy_to_cxcywh,
     xyxy_to_ltrb,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "elementwise_iou",
     "ltrb_to_xyxy",
     "make_anchors",
+    "unique_values",
     "xyxy_to_cxcywh",
     "xyxy_to_ltrb",
 ]

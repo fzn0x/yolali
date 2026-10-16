@@ -3,7 +3,7 @@
 Follows the COCO evaluation protocol (Lin et al. 2014; pycocotools
 ``COCOeval.evaluateImg``), reimplemented from the protocol description:
 
-* predictions are visited in descending score;
+* predictions are visited in descending score, class by class;
 * each takes the not-yet-matched *regular* ground truth of its class with
   the highest IoU at or above the threshold;
 * if none qualifies, it may match an *ignored* ground truth (a crowd region,
@@ -12,8 +12,8 @@ Follows the COCO evaluation protocol (Lin et al. 2014; pycocotools
 * crowd regions use intersection-over-prediction-area instead of IoU and may
   absorb any number of predictions.
 
-Matching is done independently per threshold, so a prediction may be a TP
-at 0.5 and an FP at 0.75.
+Matching is greedy over predictions but independent across thresholds, so
+all thresholds are processed at once as a ``(T, M)`` "taken" table.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from __future__ import annotations
 import torch
 from torch import Tensor
 
-from yolali.ops.boxes import box_iou
+from yolali.ops.boxes import box_iou, unique_values
 
 IOU_THRESHOLDS = torch.linspace(0.5, 0.95, 10)
 
@@ -37,10 +37,41 @@ def crowd_iou(pred: Tensor, crowd: Tensor) -> Tensor:
     return inter / area
 
 
-def _best(cand: Tensor, thr: float) -> int:
-    """Index of the largest candidate at or above ``thr``, or ``-1``."""
-    j = int(cand.argmax())
-    return j if float(cand[j]) >= thr else -1
+def _match_one_class(
+    iou: Tensor, ignored: Tensor, crowd: Tensor, thresholds: Tensor
+) -> tuple[Tensor, Tensor]:
+    """Greedy matching for the predictions (rows, already score-sorted) of one class.
+
+    Args:
+        iou: ``(N, M)`` overlap between this class's predictions and ground truths.
+        ignored: ``(M,)`` bool.
+        crowd: ``(M,)`` bool (subset of ``ignored``; may be matched repeatedly).
+        thresholds: ``(T,)``.
+
+    Returns:
+        ``tp (N, T)``, ``ignore (N, T)``.
+    """
+    n, m = iou.shape
+    t = int(thresholds.shape[0])
+    tp = torch.zeros(n, t, dtype=torch.bool)
+    ignore = torch.zeros(n, t, dtype=torch.bool)
+    taken = torch.zeros(t, m, dtype=torch.bool)
+    rows = torch.arange(t)
+    for k in range(n):
+        row = iou[k].unsqueeze(0).expand(t, m)
+        # Stage 1: free regular ground truth with the best overlap.
+        regular = row.masked_fill(ignored.unsqueeze(0) | taken, -1.0)
+        best_val, best_j = regular.max(1)
+        hit = best_val >= thresholds
+        # Stage 2 (only where stage 1 failed): ignored ground truth; crowd can be reused.
+        blocked = ~ignored.unsqueeze(0) | (taken & ~crowd.unsqueeze(0))
+        alt_val, alt_j = row.masked_fill(blocked, -1.0).max(1)
+        alt_hit = ~hit & (alt_val >= thresholds)
+        taken[rows[hit], best_j[hit]] = True
+        taken[rows[alt_hit], alt_j[alt_hit]] = True
+        tp[k] = hit
+        ignore[k] = alt_hit
+    return tp, ignore
 
 
 def match_predictions(
@@ -80,29 +111,17 @@ def match_predictions(
     crowd = gt_crowd if gt_crowd is not None else torch.zeros(m, dtype=torch.bool)
     ignored = crowd | (gt_ignore if gt_ignore is not None else torch.zeros(m, dtype=torch.bool))
 
-    order = torch.argsort(-pred_scores, stable=True)
-    same_class = pred_classes.unsqueeze(1) == gt_classes.unsqueeze(0)  # (N, M)
-    iou = box_iou(pred_boxes, gt_boxes) * same_class  # (N, M)
-    if bool(crowd.any()):
-        iou[:, crowd] = crowd_iou(pred_boxes, gt_boxes[crowd]) * same_class[:, crowd]
-
-    for ti in range(t):
-        thr = float(thresholds[ti])
-        taken = torch.zeros(m, dtype=torch.bool)
-        for k in range(n):
-            i = int(order[k])
-            row = iou[i]
-            # Stage 1: regular ground truth that is still free.
-            regular = row.masked_fill(ignored | taken, -1.0)
-            j = _best(regular, thr)
-            if j >= 0:
-                taken[j] = True
-                tp[i, ti] = True
-                continue
-            # Stage 2: ignored ground truth (crowd may be reused, others once).
-            blocked = ~ignored | (taken & ~crowd)
-            j = _best(row.masked_fill(blocked, -1.0), thr)
-            if j >= 0:
-                taken[j] = True
-                ignore[i, ti] = True
+    for c in unique_values(gt_classes):
+        p: Tensor = (pred_classes == c).nonzero(as_tuple=True)[0]
+        if p.shape[0] == 0:
+            continue
+        p = p[torch.argsort(-pred_scores[p], stable=True)]
+        g: Tensor = (gt_classes == c).nonzero(as_tuple=True)[0]
+        iou = box_iou(pred_boxes[p], gt_boxes[g])  # (n_c, m_c)
+        crowd_g = crowd[g]
+        if bool(crowd_g.any()):
+            iou[:, crowd_g] = crowd_iou(pred_boxes[p], gt_boxes[g][crowd_g])
+        tp_c, ignore_c = _match_one_class(iou, ignored[g], crowd_g, thresholds)
+        tp[p] = tp_c
+        ignore[p] = ignore_c
     return tp, ignore

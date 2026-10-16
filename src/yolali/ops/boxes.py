@@ -21,6 +21,12 @@ IoUKind = Literal["iou", "giou", "ciou"]
 _EPS = 1e-7
 
 
+def unique_values(x: Tensor) -> list[int]:
+    """Sorted distinct integer values of a 1-D tensor, as Python ints."""
+    values: Tensor = torch.unique(x)  # pyright: ignore[reportUnknownVariableType] - overloaded stub
+    return [int(v) for v in values.tolist()]  # pyright: ignore[reportUnknownVariableType] - as above
+
+
 def xyxy_to_cxcywh(boxes: Tensor) -> Tensor:
     """``(..., 4) [x1, y1, x2, y2]`` -> ``(..., 4) [cx, cy, w, h]``."""
     x1, y1, x2, y2 = boxes.unbind(-1)
