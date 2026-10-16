@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 400" width="1600" height="400" role="img" aria-label="yolali: a YOLO you can actually read">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0v40" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="1"/>
+    </pattern>
+    <style>
+      .mono { font-family: 'Cascadia Mono','SF Mono','JetBrains Mono',Consolas,ui-monospace,monospace; }
+    </style>
+  </defs>
+  <rect width="1600" height="400" fill="#1849a9"/>
+  <rect width="1600" height="400" fill="url(#grid)"/>
+
+  <!-- mark -->
+  <g fill="#ffffff" transform="translate(96 112)">
+    <path d="M0 0h48v16H16v32H0zM128 0h48v48h-16V16h-32zM0 128h16v32h32v16H0zM160 128h16v48h-48v-16h32z"/>
+    <rect x="80" y="80" width="16" height="16"/>
+  </g>
+  <text class="mono" x="320" y="214" fill="#ffffff" font-size="128" font-weight="700" letter-spacing="-3">yolali</text>
+  <text class="mono" x="324" y="282" fill="#ffffff" font-size="38">A YOLO you can actually read.</text>
+  <text class="mono" x="324" y="330" fill="#ffffff" fill-opacity="0.75" font-size="22">clean-room PyTorch · NMS-free · fully typed · Apache-2.0</text>
+
+  <!-- a detection, drawn as line art -->
+  <g transform="translate(1090 56)" fill="none" stroke="#ffffff" stroke-width="3">
+    <rect x="0" y="0" width="420" height="288" stroke-dasharray="6 8" stroke-opacity="0.45"/>
+    <rect x="62" y="48" width="236" height="200"/>
+    <path d="M62 48v-6M62 48h-6M298 48v-6M298 48h6M62 248v6M62 248h-6M298 248v6M298 248h6"/>
+    <rect x="62" y="22" width="150" height="26" fill="#ffffff" stroke="none"/>
+    <text class="mono" x="70" y="41" fill="#1849a9" stroke="none" font-size="17">dog 0.91</text>
+    <text class="mono" x="286" y="266" fill="#ffffff" stroke="none" fill-opacity="0.75" font-size="15">xyxy (N,4) px</text>
+    <circle cx="180" cy="148" r="4" fill="#ffffff" stroke="none"/>
+  </g>
+</svg>

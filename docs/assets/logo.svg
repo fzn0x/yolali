@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" width="420" height="96" role="img" aria-label="yolali">
+  <g fill="#1849a9">
+    <path d="M16 16h24v8H24v16h-8zM56 16h24v24h-8V24H56zM16 56h8v16h16v8H16zM72 56h8v24H56v-8h16z"/>
+    <rect x="44" y="44" width="8" height="8"/>
+  </g>
+  <text x="104" y="68" fill="#16202a" font-family="'Cascadia Mono','SF Mono','JetBrains Mono',Consolas,ui-monospace,monospace" font-size="56" font-weight="700" letter-spacing="-1">yolali</text>
+</svg>

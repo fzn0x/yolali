@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 330" width="1040" height="330" role="img" aria-label="yolali block diagram: image to backbone to neck to head to RawPrediction, then loss while training or decode at inference">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#1849a9"/>
+    </marker>
+    <style>
+      text { font-family: 'Cascadia Mono','SF Mono','JetBrains Mono',Consolas,ui-monospace,monospace; fill: #16202a; }
+      .box { fill: none; stroke: #1849a9; stroke-width: 2; }
+      .flow { fill: none; stroke: #1849a9; stroke-width: 2; marker-end: url(#arr); }
+      .name { font-size: 17px; font-weight: 700; }
+      .shape { font-size: 13px; fill: #1849a9; }
+      .note { font-size: 13px; fill: #4a5a6a; }
+    </style>
+  </defs>
+
+  <!-- image -->
+  <rect class="box" x="16" y="96" width="120" height="72"/>
+  <text class="name" x="30" y="128">image</text>
+  <text class="shape" x="30" y="152">(B,3,H,W)</text>
+
+  <path class="flow" d="M136 132H176"/>
+
+  <!-- backbone -->
+  <rect class="box" x="176" y="60" width="176" height="144"/>
+  <text class="name" x="190" y="90">backbone</text>
+  <text class="note" x="190" y="114">GELAN  or</text>
+  <text class="note" x="190" y="132">ViT + STA</text>
+  <text class="shape" x="190" y="164">P3 (B,C3,H/8,W/8)</text>
+  <text class="shape" x="190" y="180">P4 (B,C4,H/16,·)</text>
+  <text class="shape" x="190" y="196">P5 (B,C5,H/32,·)</text>
+
+  <path class="flow" d="M352 112H392"/>
+  <path class="flow" d="M352 132H392"/>
+  <path class="flow" d="M352 152H392"/>
+
+  <!-- neck -->
+  <rect class="box" x="392" y="60" width="160" height="144"/>
+  <text class="name" x="406" y="90">neck</text>
+  <text class="note" x="406" y="114">GELAN-PAN</text>
+  <text class="note" x="406" y="132">SPP-ELAN, 2 up,</text>
+  <text class="note" x="406" y="150">2 down merges</text>
+  <text class="shape" x="406" y="184">[P3,P4,P5]</text>
+
+  <path class="flow" d="M552 112H592"/>
+  <path class="flow" d="M552 132H592"/>
+  <path class="flow" d="M552 152H592"/>
+
+  <!-- head -->
+  <rect class="box" x="592" y="60" width="176" height="144"/>
+  <text class="name" x="606" y="90">head</text>
+  <text class="note" x="606" y="114">DFL or direct ltrb</text>
+  <text class="note" x="606" y="132">dual: o2m + o2o</text>
+  <text class="shape" x="606" y="164">box_raw (B,A,4r)</text>
+  <text class="shape" x="606" y="180">cls_logits (B,A,nc)</text>
+  <text class="shape" x="606" y="196">A = Σ H·W / s²</text>
+
+  <!-- RawPrediction split -->
+  <path class="flow" d="M768 100 H 820 V 60 H 864"/>
+  <path class="flow" d="M768 164 H 820 V 204 H 864"/>
+  <text class="shape" x="780" y="140">RawPrediction</text>
+
+  <!-- training path -->
+  <rect class="box" x="864" y="20" width="160" height="80"/>
+  <text class="name" x="878" y="48">assign + loss</text>
+  <text class="note" x="878" y="70">TAL / one-to-one</text>
+  <text class="note" x="878" y="88">BCE · CIoU · DFL</text>
+  <text class="note" x="864" y="14">train</text>
+
+  <!-- inference path -->
+  <rect class="box" x="864" y="164" width="160" height="80"/>
+  <text class="name" x="878" y="192">decode</text>
+  <text class="note" x="878" y="214">o2o: top-k, no NMS</text>
+  <text class="shape" x="878" y="232">Detections (N,6)</text>
+  <text class="note" x="864" y="262">eval / export</text>
+
+  <!-- footnote -->
+  <text class="note" x="16" y="296">Boxes are xyxy in pixels at every public boundary. Pyramids are list[Tensor] at strides (8, 16, 32).</text>
+  <text class="note" x="16" y="316">r = reg_max, or 1 for direct regression. One package per block: yolali.nn, yolali.assign, yolali.loss, yolali.ops.</text>
+</svg>

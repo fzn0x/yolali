@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="yolali">
+  <!-- A detector's bounding box: four corner brackets and the anchor point. fill-only so Material can recolour it with currentColor. -->
+  <path d="M4 4h20v6H10v14H4zM40 4h20v20h-6V10H40zM4 40h6v14h14v6H4zM54 40h6v20H40v-6h14z"/>
+  <rect x="28" y="28" width="8" height="8"/>
+</svg>
