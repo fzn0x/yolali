@@ -69,7 +69,7 @@ def export_onnx(
     h, w = (img_size, img_size) if isinstance(img_size, int) else img_size
     wrapper = ExportWrapper(model, max_det).cpu().eval()
     dummy = torch.zeros(1, 3, h, w)
-    dynamic_axes = {"images": {0: "batch"}, "output": {0: "batch"}} if dynamic_batch else None
+    dynamic_shapes = ({0: torch.export.Dim("batch", min=1)},) if dynamic_batch else None
     torch.onnx.export(
         wrapper,
         (dummy,),
@@ -77,7 +77,7 @@ def export_onnx(
         input_names=["images"],
         output_names=["output"],
         opset_version=opset,
-        dynamic_axes=dynamic_axes,
+        dynamic_shapes=dynamic_shapes,
         dynamo=True,
         external_data=False,
     )

@@ -122,6 +122,17 @@ class DetectionDataset(Dataset[Sample]):
         return sample
 
 
+class _GeometryPartner:
+    """Picklable sampler for MixUp: a random raw sample run through ``geometry``."""
+
+    def __init__(self, dataset: DetectionDataset, geometry: Compose) -> None:
+        self.dataset = dataset
+        self.geometry = geometry
+
+    def __call__(self, rng: np.random.Generator) -> Sample:
+        return self.geometry(self.dataset.random_raw(rng), rng)
+
+
 def default_train_transforms(
     dataset: DetectionDataset, size: int, aug: AugmentConfig | None = None
 ) -> Compose:
@@ -146,13 +157,10 @@ def default_train_transforms(
         ]
     )
 
-    def mixup_partner(rng: np.random.Generator) -> Sample:
-        return geometry(dataset.random_raw(rng), rng)
-
     return Compose(
         [
             geometry,
-            MixUp(mixup_partner, p=cfg.mixup),
+            MixUp(_GeometryPartner(dataset, geometry), p=cfg.mixup),
             RandomHSV(cfg.hsv_h, cfg.hsv_s, cfg.hsv_v),
             RandomFlip(cfg.flipud, horizontal=False),
             RandomFlip(cfg.fliplr, horizontal=True),
