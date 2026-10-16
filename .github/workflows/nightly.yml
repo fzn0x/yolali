@@ -1,0 +1,35 @@
+name: nightly
+
+# Smoke-trains the N-size GELAN model on COCO128 for a handful of epochs on
+# CPU and asserts that the smoothed loss decreases. The 50-epoch gate in
+# docs/plan.md runs on a GPU; this job only guards against regressions that
+# break training outright.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  coco128-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync environment (CPU torch)
+        run: uv sync
+
+      - name: Smoke train
+        # Wired up in phase 4; until then this step is a no-op so the
+        # workflow stays green and visible.
+        run: |
+          if [ -f scripts/train.py ]; then
+            uv run pytest -m slow tests/train/test_smoke_coco128.py
+          else
+            echo "scripts/train.py not present yet; skipping"
+          fi
